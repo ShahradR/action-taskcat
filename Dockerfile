@@ -1,3 +1,3 @@
 FROM taskcat/taskcat
 
-ENTRYPOINT [ "taskcat", "test", "run" ]
+ENTRYPOINT /bin/sh -c "taskcat test run | cat"
