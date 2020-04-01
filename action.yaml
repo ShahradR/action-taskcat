@@ -1,0 +1,7 @@
+---
+name: taskcat
+description: Run taskcat against AWS CloudFormation templates.
+
+runs:
+  using: docker
+  image: ./Dockerfile
