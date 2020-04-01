@@ -4,4 +4,4 @@ description: Run taskcat against AWS CloudFormation templates.
 
 runs:
   using: docker
-  image: ./Dockerfile
+  image: taskcat/taskcat:latest
