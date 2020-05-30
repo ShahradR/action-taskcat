@@ -1,3 +1,6 @@
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -25,8 +28,9 @@ public class TasckatActionTestCase {
       .lines()
       .collect(Collectors.joining("\n"));
 
-    Assert.assertTrue(
-      output.contains("NoCredentialsError Unable to locate credentials")
+    assertThat(
+      output,
+      containsString("NoCredentialsError Unable to locate credentials")
     );
 
     Assert.assertEquals(1, process.exitValue());
