@@ -1,0 +1,10 @@
+---
+project:
+  name: action-taskcat-default
+  owner: shahrad@rezaei.io
+
+tests:
+  default:
+    template: templates/dummyStack.yaml
+    regions:
+      - ca-central-1
