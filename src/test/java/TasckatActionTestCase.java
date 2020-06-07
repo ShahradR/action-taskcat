@@ -14,10 +14,10 @@ public class TasckatActionTestCase {
     throws IOException {
     ProcessBuilder pBuilder = new ProcessBuilder(
       "act",
-      "--workflows",
-      "./src/test/resources/workflows/",
       "--job",
-      "taskcat"
+      "taskcat",
+      "--directory",
+      "./src/test/resources/default/"
     );
     pBuilder.redirectErrorStream(true);
     Process process = pBuilder.start();
