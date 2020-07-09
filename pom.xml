@@ -53,6 +53,12 @@
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.22.1</version>
+          <configuration>
+            <systemPropertyVariables>
+              <awsAccessKeyId>${env.AWS_ACCESS_KEY_ID}</awsAccessKeyId>
+              <awsSecretAccessKey>${env.AWS_SECRET_ACCESS_KEY}</awsSecretAccessKey>
+            </systemPropertyVariables>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
