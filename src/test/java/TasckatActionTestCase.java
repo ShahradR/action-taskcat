@@ -79,4 +79,36 @@ public class TasckatActionTestCase {
 
     Assert.assertEquals(0, process.exitValue());
   }
+
+  @Test
+  public void test_when_no_commands_then_print_help()
+    throws IOException, InterruptedException {
+
+    ProcessBuilder pBuilder = new ProcessBuilder(
+      "act",
+      "--job",
+      "taskcat",
+      "--directory",
+      "./src/test/resources/help/"
+    );
+    pBuilder.redirectErrorStream(true);
+    Process process = pBuilder.start();
+
+    // Prevent the "java.lang.IllegalThreadStateException: process hasn't exited"
+    // exception from being thrown.
+    process.waitFor(15, TimeUnit.MINUTES);
+
+    String output = new BufferedReader(
+      new InputStreamReader(process.getInputStream())
+    )
+      .lines()
+      .collect(Collectors.joining("\n"));
+
+    assertThat(
+      output,
+      containsString("taskcat is a tool that tests AWS CloudFormation templates.")
+    );
+
+    Assert.assertEquals(0, process.exitValue());
+  }
 }
