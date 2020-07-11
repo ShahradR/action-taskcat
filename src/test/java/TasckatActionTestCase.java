@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.junit.*;
 
@@ -11,7 +12,7 @@ public class TasckatActionTestCase {
 
   @Test
   public void test_when_creds_are_missing_then_throw_NoCredentialsError()
-    throws IOException {
+    throws IOException, InterruptedException {
     ProcessBuilder pBuilder = new ProcessBuilder(
       "act",
       "--job",
@@ -21,6 +22,10 @@ public class TasckatActionTestCase {
     );
     pBuilder.redirectErrorStream(true);
     Process process = pBuilder.start();
+
+    // Prevent the "java.lang.IllegalThreadStateException: process hasn't exited"
+    // exception from being thrown.
+    process.waitFor(15, TimeUnit.MINUTES);
 
     String output = new BufferedReader(
       new InputStreamReader(process.getInputStream())
@@ -38,7 +43,7 @@ public class TasckatActionTestCase {
 
   @Test
   public void test_when_creds_are_available_then_create_cfn()
-    throws IOException {
+    throws IOException, InterruptedException {
 
     String awsAccessKeyId = System.getProperty("awsAccessKeyId");
     String awsSecretAccessKey = System.getProperty("awsSecretAccessKey");
@@ -56,6 +61,10 @@ public class TasckatActionTestCase {
     );
     pBuilder.redirectErrorStream(true);
     Process process = pBuilder.start();
+
+    // Prevent the "java.lang.IllegalThreadStateException: process hasn't exited"
+    // exception from being thrown.
+    process.waitFor(15, TimeUnit.MINUTES);
 
     String output = new BufferedReader(
       new InputStreamReader(process.getInputStream())
