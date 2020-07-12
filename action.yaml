@@ -1,0 +1,24 @@
+---
+name: taskcat
+author: Shahrad Rezaei
+description: |
+  The unofficial GitHub Action to run taskcat tests and validate your AWS
+  CloudFormation templates by deploying them in different AWS regions and
+  availability zones.
+
+inputs:
+  commands:
+    description: |
+      Command, subcommands, and arguments to pass to taskcat. Should be
+      formatted as "[args] <command> [args] [subcommand] [args]". The taskcat
+      invocation itself is already handled by the action-no need to prefix the
+      command with "taskcat".
+    required: true
+
+runs:
+  using: docker
+  image: docker://taskcat/taskcat:latest
+  entrypoint:
+    - /bin/sh
+    - -c
+    - ${{ format('taskcat {0}', inputs.commands) }}

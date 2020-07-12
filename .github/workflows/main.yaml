@@ -1,0 +1,43 @@
+name: CI workflow
+
+on: [push, pull_request]
+
+jobs:
+  pre-commit:
+    name: Run pre-commit checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.0
+
+  tests:
+    name: Maven verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install nektos/act
+        run: curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+      - uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Run the Maven verify phase
+        run: mvn -B verify --file pom.xml
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs: [pre-commit, tests]
+    if: ${{ needs.pre-commit.result == 'success' && needs.tests.result == 'success' }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2.1.0
+        with:
+          node-version: 12
+      - name: Release
+        run: npx semantic-release

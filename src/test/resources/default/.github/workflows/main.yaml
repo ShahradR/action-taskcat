@@ -1,0 +1,25 @@
+---
+on: [push]
+
+jobs:
+  taskcat:
+    runs-on: ubuntu-latest
+    name: taskcat
+    # Cannot use GitHub Action's "services" feature due to an issue in act. See nektos/act#173 for more details.
+    # services:
+    #   moto:
+    #     image: motoserver/moto
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: set PY
+        run: echo "::set-env name=PY::$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')"
+      - name: taskcat
+        uses: ./../../../../
+        with:
+          commands: test run
+        env:
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          AWS_SESSION_TOKEN: ${{secrets.AWS_SESSION_TOKEN}}

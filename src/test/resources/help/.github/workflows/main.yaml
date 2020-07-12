@@ -1,0 +1,19 @@
+---
+on: [push]
+
+jobs:
+  taskcat:
+    runs-on: ubuntu-latest
+    name: taskcat
+    # Cannot use GitHub Action's "services" feature due to an issue in act. See nektos/act#173 for more details.
+    # services:
+    #   moto:
+    #     image: motoserver/moto
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: taskcat
+        uses: ./../../../../
+        with:
+          commands: "--help"
