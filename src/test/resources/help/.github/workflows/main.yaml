@@ -16,4 +16,4 @@ jobs:
       - name: taskcat
         uses: ./../../../../
         with:
-          command: taskcat
+          commands: "--help"
