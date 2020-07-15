@@ -1,10 +1,13 @@
 ---
-name: taskcat
+name: Run taskcat tests
 author: Shahrad Rezaei
 description: |
   The unofficial GitHub Action to run taskcat tests and validate your AWS
-  CloudFormation templates by deploying them in different AWS regions and
-  availability zones.
+  CloudFormation templates
+
+branding:
+  icon: check-square
+  color: green
 
 inputs:
   commands:
