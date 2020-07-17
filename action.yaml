@@ -21,7 +21,4 @@ inputs:
 runs:
   using: docker
   image: docker://taskcat/taskcat:latest
-  entrypoint:
-    - /bin/sh
-    - -c
-    - ${{ format('taskcat {0}', inputs.commands) }}
+  entrypoint: ${{ format('/bin/sh -c taskcat {0}', inputs.commands) }}
