@@ -46,7 +46,7 @@ jobs:
       - name: Run taskcat test run
         uses: ShahradR/action-taskcat@v1
         with:
-          command: test run
+          commands: test run
 ```
 
 ## Managing credentials
