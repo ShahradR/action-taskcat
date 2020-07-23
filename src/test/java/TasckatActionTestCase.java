@@ -11,7 +11,6 @@ import org.junit.*;
 public class TasckatActionTestCase {
 
   @Test
-  @Ignore
   public void test_when_creds_are_missing_then_throw_NoCredentialsError()
     throws IOException, InterruptedException {
     ProcessBuilder pBuilder = new ProcessBuilder(
@@ -43,7 +42,6 @@ public class TasckatActionTestCase {
   }
 
   @Test
-  @Ignore
   public void test_when_creds_are_available_then_create_cfn()
     throws IOException, InterruptedException {
 
@@ -83,7 +81,6 @@ public class TasckatActionTestCase {
   }
 
   @Test
-  @Ignore
   public void test_when_no_commands_then_print_help()
     throws IOException, InterruptedException {
 
