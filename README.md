@@ -4,6 +4,8 @@
 
 The unofficial GitHub Action to run [taskcat] tests and validate your AWS CloudFormation templates by deploying them in different AWS regions and availability zones!
 
+> Looking for the official taskcat project? Check out the [aws-quickstart/taskcat][taskcat] repository! This repository covers issues and work relating specifically to the GitHub Action running taskcat.
+
 ## Usage
 
 To use this action, configure your workflow and repository to ensure that:
