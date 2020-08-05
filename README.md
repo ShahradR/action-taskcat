@@ -69,7 +69,7 @@ If you believe your outputs are safe to publish, you can store the `taskcat_outp
     path: ${{ github.workspace }}/taskcat_outputs/
 ```
 
-[taskcat]: github.com/aws-quickstart/taskcat
+[taskcat]: https://github.com/aws-quickstart/taskcat
 [s3-logging-repo]: https://github.com/ShahradR/s3-logging/
 [configure-aws-credentials]: https://github.com/aws-actions/configure-aws-credentials
 [upload-artifact]: https://github.com/actions/upload-artifact
