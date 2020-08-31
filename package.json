@@ -1,0 +1,33 @@
+{
+  "name": "action-taskcat",
+  "version": "1.0.0",
+  "description": "GitHub Action to run taskcat against CloudFormation templates",
+  "main": "entrypoint.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^4.0.2"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShahradR/action-taskcat.git"
+  },
+  "keywords": [
+    "aws",
+    "taskcat",
+    "aws-cloudformation",
+    "github-actions",
+    "actions"
+  ],
+  "author": "Shahrad Rezaei <shahrad@rezaei.io>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ShahradR/action-taskcat/issues"
+  },
+  "homepage": "https://github.com/ShahradR/action-taskcat#readme"
+}
