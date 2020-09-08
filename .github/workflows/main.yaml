@@ -12,17 +12,18 @@ jobs:
       - uses: pre-commit/action@v2.0.0
 
   tests:
-    name: Maven verify
+    name: Jest tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install nektos/act
         run: curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-node@v2.1.0
         with:
-          java-version: 1.8
-      - name: Run the Maven verify phase
-        run: mvn -B verify --file pom.xml
+          node-version: 14
+      - run: npm install
+      - name: Run Jest tests
+        run: npm test
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
