@@ -17,7 +17,7 @@ describe("integration tests", () => {
         .execSync(
           `act \
         --job taskcat \
-        --directory ./src/test/resources/default/ \
+        --directory ./e2e/resources/default/ \
         --secret AWS_ACCESS_KEY_ID=${awsAccessKeyId} \
         --secret AWS_SECRET_ACCESS_KEY=${awsSecretAccessKey}`
         )
@@ -38,7 +38,7 @@ describe("integration tests", () => {
         cp.execSync(
           `act \
             --job taskcat \
-            --directory ./src/test/resources/default/`
+            --directory ./e2e/resources/default/`
         );
       } catch (error) {
         actOutput = error.stdout.toString();
@@ -60,7 +60,7 @@ describe("integration tests", () => {
       var actOutput: string;
 
       actOutput = cp
-        .execSync(`act --job taskcat --directory ./src/test/resources/help/`)
+        .execSync(`act --job taskcat --directory ./e2e/resources/help/`)
         .toString();
 
       expect(actOutput).toContain(

@@ -56,7 +56,7 @@ jobs:
       - name: Invoke "taskcat test run"
         uses: ./
         with:
-          commands: test run --project-root ./src/test/resources/default
+          commands: test run --project-root ./e2e/resources/default
 
   release:
     name: Create release
