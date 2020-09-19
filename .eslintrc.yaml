@@ -6,6 +6,7 @@ env:
 extends:
   - standard
   - plugin:jest/all
+  - plugin:@typescript-eslint/recommended
   - prettier
   - prettier/standard
 parser: "@typescript-eslint/parser"
@@ -13,5 +14,7 @@ parserOptions:
   ecmaVersion: 12
 plugins:
   - "@typescript-eslint"
+  - eslint-plugin-tsdoc
   - jest
-rules: {}
+rules:
+  tsdoc/syntax: warn
