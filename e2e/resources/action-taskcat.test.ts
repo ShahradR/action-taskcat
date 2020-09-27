@@ -5,15 +5,14 @@ describe("integration tests", () => {
     it("creates a CloudFormation stack", () => {
       expect.assertions(3);
 
-      var actOutput: string;
-      var awsAccessKeyId: string | undefined = process.env.AWS_ACCESS_KEY_ID;
-      var awsSecretAccessKey: string | undefined =
+      const awsAccessKeyId: string | undefined = process.env.AWS_ACCESS_KEY_ID;
+      const awsSecretAccessKey: string | undefined =
         process.env.AWS_SECRET_ACCESS_KEY;
 
       expect(awsAccessKeyId).not.toBeUndefined();
       expect(awsSecretAccessKey).not.toBeUndefined();
 
-      actOutput = cp
+      const actOutput: string = cp
         .execSync(
           `act \
         --job taskcat \
@@ -31,8 +30,8 @@ describe("integration tests", () => {
     it("throws a NoCredentialsError exception", () => {
       expect.assertions(2);
 
-      var exitCode: number = 0;
-      var actOutput: string = "";
+      let exitCode = 0;
+      let actOutput = "";
 
       try {
         cp.execSync(
@@ -57,9 +56,7 @@ describe("integration tests", () => {
     it("prints a help message", () => {
       expect.assertions(1);
 
-      var actOutput: string;
-
-      actOutput = cp
+      const actOutput: string = cp
         .execSync(`act --job taskcat --directory ./e2e/resources/help/`)
         .toString();
 
