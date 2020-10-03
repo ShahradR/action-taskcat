@@ -1,6 +1,7 @@
 {
   "name": "action-taskcat",
   "version": "1.0.0",
+  "private": true,
   "description": "GitHub Action to run taskcat against CloudFormation templates",
   "main": "entrypoint.js",
   "directories": {
