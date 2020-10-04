@@ -55,11 +55,10 @@ describe("the maskAccountId() function", () => {
     const awsAccountId = "1234567890";
 
     mockedGlobSync.mockReturnValue(["taskcat_outputs/test.txt"]);
-    mockedReadFileSync.mockImplementation(path => {
-      switch (path) {
-        case filePath:
-          return fileContents;
-      }
+    mockedReadFileSync.mockImplementation((path, options?): string | Buffer => {
+      if (path === filePath && options === "utf-8") return fileContents;
+
+      throw new Error();
     });
 
     taskcatArtifactManager.maskAccountId(awsAccountId, "taskcat_outputs/");
