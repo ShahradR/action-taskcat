@@ -18,3 +18,5 @@ plugins:
   - jest
 rules:
   tsdoc/syntax: warn
+ignorePatterns:
+  - "dist/*"
