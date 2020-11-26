@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "GitHub Action to run taskcat against CloudFormation templates",
-  "main": "entrypoint.js",
+  "main": "src/post-entrypoint.ts",
   "directories": {
     "doc": "docs"
   },
@@ -34,7 +34,7 @@
     "typescript": "^4.0.2"
   },
   "scripts": {
-    "package": "ncc build --source-map --license licenses.txt",
+    "package": "ncc build --no-source-map-register --license licenses.txt",
     "test": "jest"
   },
   "repository": {
