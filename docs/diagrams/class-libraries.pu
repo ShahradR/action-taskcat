@@ -1,0 +1,107 @@
+@startuml Libraries
+
+skinparam ranksep 1
+scale 1.0
+
+package @actions {
+    package artifact {
+        interface ArtifactClient {
+            +uploadArtifact(name: string, files: string[], rootDirectory: string, options?: UploadOptions): Promise<UploadResponse>
+            +downloadArtifact(name: string, path?: string, options?: DownloadOptions): Promise<DownloadResponse>
+            +downloadAllArtifacts(path?: string): Promise<DownloadResponse[]>
+        }
+
+        class UploadResponse {
+            +artifactName: string
+            +artifactItems: string[]
+            +size: number
+            +failedItems: string[]
+        }
+
+        class UploadOptions {
+            +continueOnError?: boolean
+        }
+
+        class DownloadResponse {
+            +artifactName: string
+            +downloadPath: string
+        }
+
+        class DownloadOptions {
+            +createArtifactFolder?: boolean
+        }
+
+        UploadOptions -- ArtifactClient
+        DownloadOptions -- ArtifactClient
+
+        ArtifactClient -- UploadResponse
+        ArtifactClient -- DownloadResponse
+    }
+
+    package core {
+        interface InputOptions {
+            +required?: boolean
+        }
+
+        enum ExitCode {
+            +Success = 0
+            +Failure = 1
+        }
+
+        class Core {
+            +exportVariable(name: string, val: any): void
+            +setSecret(secret: string): void
+            +addPath(inputPath: string): void
+            +getInput(name: string, options?: InputOptions): string
+            +setOutput(name: string, value: any): void
+            +setCommandEcho(enabled: boolean): void
+            +setFailed(message: string | Error): void
+            +isDebug(): boolean
+            +debug(message: string): void
+            +error(message: string | Error): void
+            +warning(message: string | Error): void
+            +info(message: string): void
+            +startGroup(name: string): void
+            +endGroup(): void
+            +group<T>(name: string, fn: () => Promise<T>): Promise<T>
+            +saveState(name: string, value: any): void
+            +getState(name: string): string
+        }
+
+        InputOptions -- Core
+        Core -- ExitCode
+    }
+}
+
+package replace-in-file {
+    class replaceInFile {
+        +sync(config: ReplaceInFileConfig): ReplaceResult[]
+        +replaceInFileSync(config: ReplaceInFileConfig): ReplaceResult[]
+        +replaceInFile(config: ReplaceInFileConfig): Promise<ReplaceResult[]>
+        +replaceInFile(config: ReplaceInFileConfig, cb: (error: Error, results: ReplaceResult[])): void
+    }
+
+    interface ReplaceInFileConfig {
+        +files: string | string[]
+        +ignore?: string | string[]
+        +from: From | Array<From>
+        +to: To | Array<To>
+        +countMatches?: boolean
+        +allowEmptyPaths?: boolean
+        +disableGlobs?: boolean
+        +encoding?: string
+        +dry?: boolean,
+        +glob?: object
+    }
+
+    interface ReplaceResult {
+        +file: string
+        +hasChanged: boolean
+        +numMatches?: number
+        +numReplacements?: number
+    }
+
+    ReplaceInFileConfig -- replaceInFile
+    replaceInFile -- ReplaceResult
+}
+@enduml

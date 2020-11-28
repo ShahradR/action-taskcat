@@ -16,7 +16,7 @@ jobs:
       - name: set PY
         run: echo "::set-env name=PY::$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')"
       - name: taskcat
-        uses: ./../../../../
+        uses: ./../../../
         with:
           commands: test run
         env:

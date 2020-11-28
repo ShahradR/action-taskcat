@@ -1,0 +1,46 @@
+@startuml post-entrypoint
+participant TaskcatArtifactManager as ":TaskcatArtifactManager"
+participant inputOptions as "inputOptions:InputOptions"
+participant Core as ":Core"
+participant config as "config:ReplaceInFileConfig"
+participant replaceInFile as ":replaceInFile"
+participant uploadOptions as "uploadOptions:UploadOptions"
+participant Artifact as ":Artifact"
+participant uploadResponse as "uploadResponse:UploadResponse"
+
+[-> TaskcatArtifactManager++: main()
+    TaskcatArtifactManager -> TaskcatArtifactManager++: getAwsAccountId()
+        create inputOptions
+        TaskcatArtifactManager -> inputOptions++: <<create>>
+            TaskcatArtifactManager -> inputOptions: required = true
+        TaskcatArtifactManager <-- inputOptions--: inputOptions
+
+        create Core
+        TaskcatArtifactManager -> Core++: getInput("aws-account-id", inputOptions)
+        TaskcatArtifactManager <-- Core--: awsAccountId
+    TaskcatArtifactManager <-- TaskcatArtifactManager--: awsAccountId
+
+    TaskcatArtifactManager -> TaskcatArtifactManager++: maskAccountId(awsAccountId, taskcatOutputsPath)
+        create config
+        TaskcatArtifactManager -> config++: <<create>>
+            TaskcatArtifactManager -> config: file: "taskcat_outputs/*"
+            TaskcatArtifactManager -> config: from: awsAccountId
+            TaskcatArtifactManager -> config: to: "~*~*~*~*~*~*"
+        TaskcatArtifactManager <-- config--: config
+        TaskcatArtifactManager -> replaceInFile++: sync(config)
+        TaskcatArtifactManager <-- replaceInFile--: paths.map
+    TaskcatArtifactManager <-- TaskcatArtifactManager--
+
+    TaskcatArtifactManager -> TaskcatArtifactManager++: uploadTaskcatOutput(taskcatOutputsPath)
+        create uploadOptions
+        TaskcatArtifactManager -> uploadOptions++: <<create>>
+            TaskcatArtifactManager -> uploadOptions: continueOnError = false
+        TaskcatArtifactManager <-- uploadOptions--: uploadOptions
+        TaskcatArtifactManager -> Artifact++: uploadArtifact("taskcat_outputs", "*", "taskcat_outputs/", uploadOptions)
+            create uploadResponse
+            Artifact -> uploadResponse++
+            Artifact <-- uploadResponse--
+        TaskcatArtifactManager <-- Artifact--: uploadResponse
+    TaskcatArtifactManager <-- TaskcatArtifactManager--: uploadResponse
+[<-- TaskcatArtifactManager
+@enduml
