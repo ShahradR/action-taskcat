@@ -1,8 +1,8 @@
 # Mocking AWS calls using the moto server
 
-tasckat uses boto3 to communicate with AWS. Because we treat taskcat as a black box, we cannot directly modify its code to inject mocks and abstract AWS away.
+tasckat uses boto3 to communicate with AWS. Because taskcat is treated as a black box, its code can't be modified to inject mocks and abstract the AWS cloud.
 
-The [spulec/moto project][moto-github] provides a server which mocks AWS service endpoints. While originally designed to allow tests for non-Python projects, we can leverage this to trick boto3 into calling our fake endpoints, force certain outputs from taskcat, and test our GitHub Action's response to those outputs.
+The [spulec/moto project][moto-github] provides a server which mocks AWS service endpoints. While originally designed to allow tests for non-Python projects, it can be leveraged to trick boto3 into calling the fake moto endpoints, forcing certain outputs from taskcat, and testing the GitHub Action's response to those outputs.
 
 ![image](images/moto-test-overview.svg)
 
