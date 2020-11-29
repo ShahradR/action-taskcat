@@ -1,8 +1,14 @@
 ---
-exclude: "dist/"
+default_stages: [commit]
+exclude: |
+  (?x)^(
+    vale/styles/|
+    dist/
+  )
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
+    rev: v3.3.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
@@ -11,16 +17,18 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
         args: [--fix=no]
+      - id: check-added-large-files
+        args: [--maxkb=10240]
 
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: v2.2.0
+    rev: v4.0.0
     hooks:
       - id: commitlint
         stages: [commit-msg]
         additional_dependencies: ["@commitlint/config-conventional"]
 
-  - repo: https://github.com/prettier/prettier
-    rev: 1.19.1
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v2.2.1
     hooks:
       - id: prettier
         name: Prettier
@@ -46,3 +54,10 @@ repos:
           - eslint-plugin-tsdoc@0.2.7
           - "@typescript-eslint/eslint-plugin@3.10.1"
           - "@typescript-eslint/parser@3.10.1"
+
+  - repo: local
+    hooks:
+      - id: dockerfile-provides-entrypoint
+        name: Vale
+        language: docker_image
+        entry: jdkato/vale:latest
