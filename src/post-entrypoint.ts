@@ -20,7 +20,7 @@ class TaskcatArtifactManager {
     const replaceOptions: ReplaceInFileConfig = {
       files: filePath,
       from: awsAccountId,
-      to: "***"
+      to: "***",
     };
 
     sync(replaceOptions);
