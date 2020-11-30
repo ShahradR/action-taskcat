@@ -1,4 +1,4 @@
-# Mocking AWS calls using the moto server
+# Mocking Amazon Web Services calls using the moto server
 
 tasckat uses boto3 to communicate with AWS. Because taskcat is treated as a black box, its code can't be modified to inject mocks and abstract the AWS cloud.
 
