@@ -5,7 +5,7 @@
 # hadolint disable=DL3007
 FROM taskcat/taskcat:latest
 
-RUN apk add --no-cache nodejs=12.18.4-r0 npm=12.18.4-r0 && rm -rf /var/cache/apk/*
+RUN apk add --no-cache nodejs=12.20.1-r0 npm=12.20.1-r0 && rm -rf /var/cache/apk/*
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
