@@ -8,6 +8,7 @@
     "doc": "docs"
   },
   "dependencies": {
+    "@actions/artifact": "^0.5.0",
     "replace-in-file": "^6.1.0"
   },
   "devDependencies": {
