@@ -1,6 +1,8 @@
 import { TaskcatArtifactManager } from "../src/post-entrypoint";
 import { readFileSync, writeFileSync } from "fs";
 import { sync } from "glob";
+import * as artifact from "@actions/artifact";
+// const artifact = require("@actions/artifact");
 
 jest.mock("fs");
 jest.mock("glob");
@@ -67,6 +69,35 @@ describe("the maskAccountId() function", () => {
       filePath,
       "abcd1234 ***",
       "utf-8"
+    );
+  });
+});
+
+describe("the publishTaskcatOutputs function", () => {
+  const taskcatArtifactManager: TaskcatArtifactManager = new TaskcatArtifactManager();
+
+  const mockedGlobSync = (sync as unknown) as jest.MockedFunction<typeof sync>;
+
+  const uploadArtifact = artifact.create();
+
+  it("should retrieve all files from the taskcat_output directory", () => {
+    expect.assertions(1);
+
+    mockedGlobSync.mockReturnValue([
+      "taskcat_outputs/test1.txt",
+      "taskcat_outputs/test2.txt",
+    ]);
+
+    const spy = jest.spyOn(uploadArtifact, "uploadArtifact");
+    taskcatArtifactManager.publishTaskcatOutputs(
+      uploadArtifact,
+      "taskcat_outputs/"
+    );
+
+    expect(spy).toHaveBeenCalledWith(
+      "taskcat_outputs",
+      ["taskcat_outputs/test1.txt", "taskcat_outputs/test2.txt"],
+      "taskcat_outputs/"
     );
   });
 });
