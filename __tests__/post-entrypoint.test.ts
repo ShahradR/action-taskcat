@@ -101,3 +101,20 @@ describe("the publishTaskcatOutputs function", () => {
     );
   });
 });
+
+describe("the maskAndPublishTaskcatArtifacts function", () => {
+  const taskcatArtifactManager: TaskcatArtifactManager = new TaskcatArtifactManager();
+
+  it("should be called", () => {
+    expect.assertions(1);
+
+    const spy = jest.spyOn(
+      taskcatArtifactManager,
+      "maskAndPublishTaskcatArtifacts"
+    );
+
+    taskcatArtifactManager.maskAndPublishTaskcatArtifacts();
+
+    expect(spy).toHaveBeenCalledWith();
+  });
+});

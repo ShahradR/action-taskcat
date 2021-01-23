@@ -5832,6 +5832,13 @@ var TaskcatArtifactManager = /** @class */ (function () {
     function TaskcatArtifactManager() {
     }
     /**
+     * Mask the AWS account ID from the log files generated in the taskcat_outputs
+     * directory, and publish them as a GitHub artifact.
+     */
+    TaskcatArtifactManager.prototype.maskAndPublishTaskcatArtifacts = function () {
+        return;
+    };
+    /**
      * Masks the AWS account ID from the taskcat_output logs.
      *
      * @throws {@link Error} Thrown if the AWS account ID is an empty string.
@@ -5853,15 +5860,17 @@ var TaskcatArtifactManager = /** @class */ (function () {
     /**
      * Publish the taskcat output logs as a GitHub artifact
      *
-     * @param filePath the file path to the `taskcat_outputs` directory
+     * @param filePath - the file path to the `taskcat_outputs` directory
      */
     TaskcatArtifactManager.prototype.publishTaskcatOutputs = function (artifactClient, filePath) {
-        var taskcat_logs = glob_1.glob.sync(filePath);
-        artifactClient.uploadArtifact("taskcat_outputs", taskcat_logs, filePath);
+        var taskcatLogs = glob_1.glob.sync(filePath);
+        artifactClient.uploadArtifact("taskcat_outputs", taskcatLogs, filePath);
     };
     return TaskcatArtifactManager;
 }());
 exports.TaskcatArtifactManager = TaskcatArtifactManager;
+var taskcatArtifactManager = new TaskcatArtifactManager();
+taskcatArtifactManager.maskAndPublishTaskcatArtifacts();
 
 
 /***/ }),

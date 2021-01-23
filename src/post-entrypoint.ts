@@ -7,6 +7,14 @@ import { glob } from "glob";
  */
 class TaskcatArtifactManager {
   /**
+   * Mask the AWS account ID from the log files generated in the taskcat_outputs
+   * directory, and publish them as a GitHub artifact.
+   */
+  public maskAndPublishTaskcatArtifacts(): void {
+    return;
+  }
+
+  /**
    * Masks the AWS account ID from the taskcat_output logs.
    *
    * @throws {@link Error} Thrown if the AWS account ID is an empty string.
@@ -44,3 +52,6 @@ class TaskcatArtifactManager {
 }
 
 export { TaskcatArtifactManager };
+
+const taskcatArtifactManager = new TaskcatArtifactManager();
+taskcatArtifactManager.maskAndPublishTaskcatArtifacts();
