@@ -4,7 +4,541 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 351:
+/***/ 2605:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const artifact_client_1 = __nccwpck_require__(8802);
+/**
+ * Constructs an ArtifactClient
+ */
+function create() {
+    return artifact_client_1.DefaultArtifactClient.create();
+}
+exports.create = create;
+//# sourceMappingURL=artifact-client.js.map
+
+/***/ }),
+
+/***/ 8802:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core = __importStar(__nccwpck_require__(2186));
+const upload_specification_1 = __nccwpck_require__(183);
+const upload_http_client_1 = __nccwpck_require__(4354);
+const utils_1 = __nccwpck_require__(6327);
+const download_http_client_1 = __nccwpck_require__(8538);
+const download_specification_1 = __nccwpck_require__(5686);
+const config_variables_1 = __nccwpck_require__(2222);
+const path_1 = __nccwpck_require__(5622);
+class DefaultArtifactClient {
+    /**
+     * Constructs a DefaultArtifactClient
+     */
+    static create() {
+        return new DefaultArtifactClient();
+    }
+    /**
+     * Uploads an artifact
+     */
+    uploadArtifact(name, files, rootDirectory, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            utils_1.checkArtifactName(name);
+            // Get specification for the files being uploaded
+            const uploadSpecification = upload_specification_1.getUploadSpecification(name, rootDirectory, files);
+            const uploadResponse = {
+                artifactName: name,
+                artifactItems: [],
+                size: 0,
+                failedItems: []
+            };
+            const uploadHttpClient = new upload_http_client_1.UploadHttpClient();
+            if (uploadSpecification.length === 0) {
+                core.warning(`No files found that can be uploaded`);
+            }
+            else {
+                // Create an entry for the artifact in the file container
+                const response = yield uploadHttpClient.createArtifactInFileContainer(name, options);
+                if (!response.fileContainerResourceUrl) {
+                    core.debug(response.toString());
+                    throw new Error('No URL provided by the Artifact Service to upload an artifact to');
+                }
+                core.debug(`Upload Resource URL: ${response.fileContainerResourceUrl}`);
+                // Upload each of the files that were found concurrently
+                const uploadResult = yield uploadHttpClient.uploadArtifactToFileContainer(response.fileContainerResourceUrl, uploadSpecification, options);
+                // Update the size of the artifact to indicate we are done uploading
+                // The uncompressed size is used for display when downloading a zip of the artifact from the UI
+                yield uploadHttpClient.patchArtifactSize(uploadResult.totalSize, name);
+                core.info(`Finished uploading artifact ${name}. Reported size is ${uploadResult.uploadSize} bytes. There were ${uploadResult.failedItems.length} items that failed to upload`);
+                uploadResponse.artifactItems = uploadSpecification.map(item => item.absoluteFilePath);
+                uploadResponse.size = uploadResult.uploadSize;
+                uploadResponse.failedItems = uploadResult.failedItems;
+            }
+            return uploadResponse;
+        });
+    }
+    downloadArtifact(name, path, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const downloadHttpClient = new download_http_client_1.DownloadHttpClient();
+            const artifacts = yield downloadHttpClient.listArtifacts();
+            if (artifacts.count === 0) {
+                throw new Error(`Unable to find any artifacts for the associated workflow`);
+            }
+            const artifactToDownload = artifacts.value.find(artifact => {
+                return artifact.name === name;
+            });
+            if (!artifactToDownload) {
+                throw new Error(`Unable to find an artifact with the name: ${name}`);
+            }
+            const items = yield downloadHttpClient.getContainerItems(artifactToDownload.name, artifactToDownload.fileContainerResourceUrl);
+            if (!path) {
+                path = config_variables_1.getWorkSpaceDirectory();
+            }
+            path = path_1.normalize(path);
+            path = path_1.resolve(path);
+            // During upload, empty directories are rejected by the remote server so there should be no artifacts that consist of only empty directories
+            const downloadSpecification = download_specification_1.getDownloadSpecification(name, items.value, path, (options === null || options === void 0 ? void 0 : options.createArtifactFolder) || false);
+            if (downloadSpecification.filesToDownload.length === 0) {
+                core.info(`No downloadable files were found for the artifact: ${artifactToDownload.name}`);
+            }
+            else {
+                // Create all necessary directories recursively before starting any download
+                yield utils_1.createDirectoriesForArtifact(downloadSpecification.directoryStructure);
+                core.info('Directory structure has been setup for the artifact');
+                yield utils_1.createEmptyFilesForArtifact(downloadSpecification.emptyFilesToCreate);
+                yield downloadHttpClient.downloadSingleArtifact(downloadSpecification.filesToDownload);
+            }
+            return {
+                artifactName: name,
+                downloadPath: downloadSpecification.rootDownloadLocation
+            };
+        });
+    }
+    downloadAllArtifacts(path) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const downloadHttpClient = new download_http_client_1.DownloadHttpClient();
+            const response = [];
+            const artifacts = yield downloadHttpClient.listArtifacts();
+            if (artifacts.count === 0) {
+                core.info('Unable to find any artifacts for the associated workflow');
+                return response;
+            }
+            if (!path) {
+                path = config_variables_1.getWorkSpaceDirectory();
+            }
+            path = path_1.normalize(path);
+            path = path_1.resolve(path);
+            let downloadedArtifacts = 0;
+            while (downloadedArtifacts < artifacts.count) {
+                const currentArtifactToDownload = artifacts.value[downloadedArtifacts];
+                downloadedArtifacts += 1;
+                // Get container entries for the specific artifact
+                const items = yield downloadHttpClient.getContainerItems(currentArtifactToDownload.name, currentArtifactToDownload.fileContainerResourceUrl);
+                const downloadSpecification = download_specification_1.getDownloadSpecification(currentArtifactToDownload.name, items.value, path, true);
+                if (downloadSpecification.filesToDownload.length === 0) {
+                    core.info(`No downloadable files were found for any artifact ${currentArtifactToDownload.name}`);
+                }
+                else {
+                    yield utils_1.createDirectoriesForArtifact(downloadSpecification.directoryStructure);
+                    yield utils_1.createEmptyFilesForArtifact(downloadSpecification.emptyFilesToCreate);
+                    yield downloadHttpClient.downloadSingleArtifact(downloadSpecification.filesToDownload);
+                }
+                response.push({
+                    artifactName: currentArtifactToDownload.name,
+                    downloadPath: downloadSpecification.rootDownloadLocation
+                });
+            }
+            return response;
+        });
+    }
+}
+exports.DefaultArtifactClient = DefaultArtifactClient;
+//# sourceMappingURL=artifact-client.js.map
+
+/***/ }),
+
+/***/ 2222:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+// The number of concurrent uploads that happens at the same time
+function getUploadFileConcurrency() {
+    return 2;
+}
+exports.getUploadFileConcurrency = getUploadFileConcurrency;
+// When uploading large files that can't be uploaded with a single http call, this controls
+// the chunk size that is used during upload
+function getUploadChunkSize() {
+    return 8 * 1024 * 1024; // 8 MB Chunks
+}
+exports.getUploadChunkSize = getUploadChunkSize;
+// The maximum number of retries that can be attempted before an upload or download fails
+function getRetryLimit() {
+    return 5;
+}
+exports.getRetryLimit = getRetryLimit;
+// With exponential backoff, the larger the retry count, the larger the wait time before another attempt
+// The retry multiplier controls by how much the backOff time increases depending on the number of retries
+function getRetryMultiplier() {
+    return 1.5;
+}
+exports.getRetryMultiplier = getRetryMultiplier;
+// The initial wait time if an upload or download fails and a retry is being attempted for the first time
+function getInitialRetryIntervalInMilliseconds() {
+    return 3000;
+}
+exports.getInitialRetryIntervalInMilliseconds = getInitialRetryIntervalInMilliseconds;
+// The number of concurrent downloads that happens at the same time
+function getDownloadFileConcurrency() {
+    return 2;
+}
+exports.getDownloadFileConcurrency = getDownloadFileConcurrency;
+function getRuntimeToken() {
+    const token = process.env['ACTIONS_RUNTIME_TOKEN'];
+    if (!token) {
+        throw new Error('Unable to get ACTIONS_RUNTIME_TOKEN env variable');
+    }
+    return token;
+}
+exports.getRuntimeToken = getRuntimeToken;
+function getRuntimeUrl() {
+    const runtimeUrl = process.env['ACTIONS_RUNTIME_URL'];
+    if (!runtimeUrl) {
+        throw new Error('Unable to get ACTIONS_RUNTIME_URL env variable');
+    }
+    return runtimeUrl;
+}
+exports.getRuntimeUrl = getRuntimeUrl;
+function getWorkFlowRunId() {
+    const workFlowRunId = process.env['GITHUB_RUN_ID'];
+    if (!workFlowRunId) {
+        throw new Error('Unable to get GITHUB_RUN_ID env variable');
+    }
+    return workFlowRunId;
+}
+exports.getWorkFlowRunId = getWorkFlowRunId;
+function getWorkSpaceDirectory() {
+    const workspaceDirectory = process.env['GITHUB_WORKSPACE'];
+    if (!workspaceDirectory) {
+        throw new Error('Unable to get GITHUB_WORKSPACE env variable');
+    }
+    return workspaceDirectory;
+}
+exports.getWorkSpaceDirectory = getWorkSpaceDirectory;
+function getRetentionDays() {
+    return process.env['GITHUB_RETENTION_DAYS'];
+}
+exports.getRetentionDays = getRetentionDays;
+//# sourceMappingURL=config-variables.js.map
+
+/***/ }),
+
+/***/ 8538:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs = __importStar(__nccwpck_require__(5747));
+const core = __importStar(__nccwpck_require__(2186));
+const zlib = __importStar(__nccwpck_require__(8761));
+const utils_1 = __nccwpck_require__(6327);
+const url_1 = __nccwpck_require__(8835);
+const status_reporter_1 = __nccwpck_require__(9081);
+const perf_hooks_1 = __nccwpck_require__(630);
+const http_manager_1 = __nccwpck_require__(6527);
+const config_variables_1 = __nccwpck_require__(2222);
+const requestUtils_1 = __nccwpck_require__(755);
+class DownloadHttpClient {
+    constructor() {
+        this.downloadHttpManager = new http_manager_1.HttpManager(config_variables_1.getDownloadFileConcurrency(), '@actions/artifact-download');
+        // downloads are usually significantly faster than uploads so display status information every second
+        this.statusReporter = new status_reporter_1.StatusReporter(1000);
+    }
+    /**
+     * Gets a list of all artifacts that are in a specific container
+     */
+    listArtifacts() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const artifactUrl = utils_1.getArtifactUrl();
+            // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
+            const client = this.downloadHttpManager.getClient(0);
+            const headers = utils_1.getDownloadHeaders('application/json');
+            const response = yield requestUtils_1.retryHttpClientRequest('List Artifacts', () => __awaiter(this, void 0, void 0, function* () { return client.get(artifactUrl, headers); }));
+            const body = yield response.readBody();
+            return JSON.parse(body);
+        });
+    }
+    /**
+     * Fetches a set of container items that describe the contents of an artifact
+     * @param artifactName the name of the artifact
+     * @param containerUrl the artifact container URL for the run
+     */
+    getContainerItems(artifactName, containerUrl) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // the itemPath search parameter controls which containers will be returned
+            const resourceUrl = new url_1.URL(containerUrl);
+            resourceUrl.searchParams.append('itemPath', artifactName);
+            // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
+            const client = this.downloadHttpManager.getClient(0);
+            const headers = utils_1.getDownloadHeaders('application/json');
+            const response = yield requestUtils_1.retryHttpClientRequest('Get Container Items', () => __awaiter(this, void 0, void 0, function* () { return client.get(resourceUrl.toString(), headers); }));
+            const body = yield response.readBody();
+            return JSON.parse(body);
+        });
+    }
+    /**
+     * Concurrently downloads all the files that are part of an artifact
+     * @param downloadItems information about what items to download and where to save them
+     */
+    downloadSingleArtifact(downloadItems) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const DOWNLOAD_CONCURRENCY = config_variables_1.getDownloadFileConcurrency();
+            // limit the number of files downloaded at a single time
+            core.debug(`Download file concurrency is set to ${DOWNLOAD_CONCURRENCY}`);
+            const parallelDownloads = [...new Array(DOWNLOAD_CONCURRENCY).keys()];
+            let currentFile = 0;
+            let downloadedFiles = 0;
+            core.info(`Total number of files that will be downloaded: ${downloadItems.length}`);
+            this.statusReporter.setTotalNumberOfFilesToProcess(downloadItems.length);
+            this.statusReporter.start();
+            yield Promise.all(parallelDownloads.map((index) => __awaiter(this, void 0, void 0, function* () {
+                while (currentFile < downloadItems.length) {
+                    const currentFileToDownload = downloadItems[currentFile];
+                    currentFile += 1;
+                    const startTime = perf_hooks_1.performance.now();
+                    yield this.downloadIndividualFile(index, currentFileToDownload.sourceLocation, currentFileToDownload.targetPath);
+                    if (core.isDebug()) {
+                        core.debug(`File: ${++downloadedFiles}/${downloadItems.length}. ${currentFileToDownload.targetPath} took ${(perf_hooks_1.performance.now() - startTime).toFixed(3)} milliseconds to finish downloading`);
+                    }
+                    this.statusReporter.incrementProcessedCount();
+                }
+            })))
+                .catch(error => {
+                throw new Error(`Unable to download the artifact: ${error}`);
+            })
+                .finally(() => {
+                this.statusReporter.stop();
+                // safety dispose all connections
+                this.downloadHttpManager.disposeAndReplaceAllClients();
+            });
+        });
+    }
+    /**
+     * Downloads an individual file
+     * @param httpClientIndex the index of the http client that is used to make all of the calls
+     * @param artifactLocation origin location where a file will be downloaded from
+     * @param downloadPath destination location for the file being downloaded
+     */
+    downloadIndividualFile(httpClientIndex, artifactLocation, downloadPath) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let retryCount = 0;
+            const retryLimit = config_variables_1.getRetryLimit();
+            let destinationStream = fs.createWriteStream(downloadPath);
+            const headers = utils_1.getDownloadHeaders('application/json', true, true);
+            // a single GET request is used to download a file
+            const makeDownloadRequest = () => __awaiter(this, void 0, void 0, function* () {
+                const client = this.downloadHttpManager.getClient(httpClientIndex);
+                return yield client.get(artifactLocation, headers);
+            });
+            // check the response headers to determine if the file was compressed using gzip
+            const isGzip = (incomingHeaders) => {
+                return ('content-encoding' in incomingHeaders &&
+                    incomingHeaders['content-encoding'] === 'gzip');
+            };
+            // Increments the current retry count and then checks if the retry limit has been reached
+            // If there have been too many retries, fail so the download stops. If there is a retryAfterValue value provided,
+            // it will be used
+            const backOff = (retryAfterValue) => __awaiter(this, void 0, void 0, function* () {
+                retryCount++;
+                if (retryCount > retryLimit) {
+                    return Promise.reject(new Error(`Retry limit has been reached. Unable to download ${artifactLocation}`));
+                }
+                else {
+                    this.downloadHttpManager.disposeAndReplaceClient(httpClientIndex);
+                    if (retryAfterValue) {
+                        // Back off by waiting the specified time denoted by the retry-after header
+                        core.info(`Backoff due to too many requests, retry #${retryCount}. Waiting for ${retryAfterValue} milliseconds before continuing the download`);
+                        yield utils_1.sleep(retryAfterValue);
+                    }
+                    else {
+                        // Back off using an exponential value that depends on the retry count
+                        const backoffTime = utils_1.getExponentialRetryTimeInMilliseconds(retryCount);
+                        core.info(`Exponential backoff for retry #${retryCount}. Waiting for ${backoffTime} milliseconds before continuing the download`);
+                        yield utils_1.sleep(backoffTime);
+                    }
+                    core.info(`Finished backoff for retry #${retryCount}, continuing with download`);
+                }
+            });
+            const isAllBytesReceived = (expected, received) => {
+                // be lenient, if any input is missing, assume success, i.e. not truncated
+                if (!expected ||
+                    !received ||
+                    process.env['ACTIONS_ARTIFACT_SKIP_DOWNLOAD_VALIDATION']) {
+                    core.info('Skipping download validation.');
+                    return true;
+                }
+                return parseInt(expected) === received;
+            };
+            const resetDestinationStream = (fileDownloadPath) => __awaiter(this, void 0, void 0, function* () {
+                destinationStream.close();
+                yield utils_1.rmFile(fileDownloadPath);
+                destinationStream = fs.createWriteStream(fileDownloadPath);
+            });
+            // keep trying to download a file until a retry limit has been reached
+            while (retryCount <= retryLimit) {
+                let response;
+                try {
+                    response = yield makeDownloadRequest();
+                    if (core.isDebug()) {
+                        utils_1.displayHttpDiagnostics(response);
+                    }
+                }
+                catch (error) {
+                    // if an error is caught, it is usually indicative of a timeout so retry the download
+                    core.info('An error occurred while attempting to download a file');
+                    // eslint-disable-next-line no-console
+                    console.log(error);
+                    // increment the retryCount and use exponential backoff to wait before making the next request
+                    yield backOff();
+                    continue;
+                }
+                let forceRetry = false;
+                if (utils_1.isSuccessStatusCode(response.message.statusCode)) {
+                    // The body contains the contents of the file however calling response.readBody() causes all the content to be converted to a string
+                    // which can cause some gzip encoded data to be lost
+                    // Instead of using response.readBody(), response.message is a readableStream that can be directly used to get the raw body contents
+                    try {
+                        const isGzipped = isGzip(response.message.headers);
+                        yield this.pipeResponseToFile(response, destinationStream, isGzipped);
+                        if (isGzipped ||
+                            isAllBytesReceived(response.message.headers['content-length'], yield utils_1.getFileSize(downloadPath))) {
+                            return;
+                        }
+                        else {
+                            forceRetry = true;
+                        }
+                    }
+                    catch (error) {
+                        // retry on error, most likely streams were corrupted
+                        forceRetry = true;
+                    }
+                }
+                if (forceRetry || utils_1.isRetryableStatusCode(response.message.statusCode)) {
+                    core.info(`A ${response.message.statusCode} response code has been received while attempting to download an artifact`);
+                    resetDestinationStream(downloadPath);
+                    // if a throttled status code is received, try to get the retryAfter header value, else differ to standard exponential backoff
+                    utils_1.isThrottledStatusCode(response.message.statusCode)
+                        ? yield backOff(utils_1.tryGetRetryAfterValueTimeInMilliseconds(response.message.headers))
+                        : yield backOff();
+                }
+                else {
+                    // Some unexpected response code, fail immediately and stop the download
+                    utils_1.displayHttpDiagnostics(response);
+                    return Promise.reject(new Error(`Unexpected http ${response.message.statusCode} during download for ${artifactLocation}`));
+                }
+            }
+        });
+    }
+    /**
+     * Pipes the response from downloading an individual file to the appropriate destination stream while decoding gzip content if necessary
+     * @param response the http response received when downloading a file
+     * @param destinationStream the stream where the file should be written to
+     * @param isGzip a boolean denoting if the content is compressed using gzip and if we need to decode it
+     */
+    pipeResponseToFile(response, destinationStream, isGzip) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield new Promise((resolve, reject) => {
+                if (isGzip) {
+                    const gunzip = zlib.createGunzip();
+                    response.message
+                        .on('error', error => {
+                        core.error(`An error occurred while attempting to read the response stream`);
+                        gunzip.close();
+                        destinationStream.close();
+                        reject(error);
+                    })
+                        .pipe(gunzip)
+                        .on('error', error => {
+                        core.error(`An error occurred while attempting to decompress the response stream`);
+                        destinationStream.close();
+                        reject(error);
+                    })
+                        .pipe(destinationStream)
+                        .on('close', () => {
+                        resolve();
+                    })
+                        .on('error', error => {
+                        core.error(`An error occurred while writing a downloaded file to ${destinationStream.path}`);
+                        reject(error);
+                    });
+                }
+                else {
+                    response.message
+                        .on('error', error => {
+                        core.error(`An error occurred while attempting to read the response stream`);
+                        destinationStream.close();
+                        reject(error);
+                    })
+                        .pipe(destinationStream)
+                        .on('close', () => {
+                        resolve();
+                    })
+                        .on('error', error => {
+                        core.error(`An error occurred while writing a downloaded file to ${destinationStream.path}`);
+                        reject(error);
+                    });
+                }
+            });
+            return;
+        });
+    }
+}
+exports.DownloadHttpClient = DownloadHttpClient;
+//# sourceMappingURL=download-http-client.js.map
+
+/***/ }),
+
+/***/ 5686:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -17,8 +551,1155 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const os = __importStar(__nccwpck_require__(87));
-const utils_1 = __nccwpck_require__(278);
+const path = __importStar(__nccwpck_require__(5622));
+/**
+ * Creates a specification for a set of files that will be downloaded
+ * @param artifactName the name of the artifact
+ * @param artifactEntries a set of container entries that describe that files that make up an artifact
+ * @param downloadPath the path where the artifact will be downloaded to
+ * @param includeRootDirectory specifies if there should be an extra directory (denoted by the artifact name) where the artifact files should be downloaded to
+ */
+function getDownloadSpecification(artifactName, artifactEntries, downloadPath, includeRootDirectory) {
+    // use a set for the directory paths so that there are no duplicates
+    const directories = new Set();
+    const specifications = {
+        rootDownloadLocation: includeRootDirectory
+            ? path.join(downloadPath, artifactName)
+            : downloadPath,
+        directoryStructure: [],
+        emptyFilesToCreate: [],
+        filesToDownload: []
+    };
+    for (const entry of artifactEntries) {
+        // Ignore artifacts in the container that don't begin with the same name
+        if (entry.path.startsWith(`${artifactName}/`) ||
+            entry.path.startsWith(`${artifactName}\\`)) {
+            // normalize all separators to the local OS
+            const normalizedPathEntry = path.normalize(entry.path);
+            // entry.path always starts with the artifact name, if includeRootDirectory is false, remove the name from the beginning of the path
+            const filePath = path.join(downloadPath, includeRootDirectory
+                ? normalizedPathEntry
+                : normalizedPathEntry.replace(artifactName, ''));
+            // Case insensitive folder structure maintained in the backend, not every folder is created so the 'folder'
+            // itemType cannot be relied upon. The file must be used to determine the directory structure
+            if (entry.itemType === 'file') {
+                // Get the directories that we need to create from the filePath for each individual file
+                directories.add(path.dirname(filePath));
+                if (entry.fileLength === 0) {
+                    // An empty file was uploaded, create the empty files locally so that no extra http calls are made
+                    specifications.emptyFilesToCreate.push(filePath);
+                }
+                else {
+                    specifications.filesToDownload.push({
+                        sourceLocation: entry.contentLocation,
+                        targetPath: filePath
+                    });
+                }
+            }
+        }
+    }
+    specifications.directoryStructure = Array.from(directories);
+    return specifications;
+}
+exports.getDownloadSpecification = getDownloadSpecification;
+//# sourceMappingURL=download-specification.js.map
+
+/***/ }),
+
+/***/ 6527:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const utils_1 = __nccwpck_require__(6327);
+/**
+ * Used for managing http clients during either upload or download
+ */
+class HttpManager {
+    constructor(clientCount, userAgent) {
+        if (clientCount < 1) {
+            throw new Error('There must be at least one client');
+        }
+        this.userAgent = userAgent;
+        this.clients = new Array(clientCount).fill(utils_1.createHttpClient(userAgent));
+    }
+    getClient(index) {
+        return this.clients[index];
+    }
+    // client disposal is necessary if a keep-alive connection is used to properly close the connection
+    // for more information see: https://github.com/actions/http-client/blob/04e5ad73cd3fd1f5610a32116b0759eddf6570d2/index.ts#L292
+    disposeAndReplaceClient(index) {
+        this.clients[index].dispose();
+        this.clients[index] = utils_1.createHttpClient(this.userAgent);
+    }
+    disposeAndReplaceAllClients() {
+        for (const [index] of this.clients.entries()) {
+            this.disposeAndReplaceClient(index);
+        }
+    }
+}
+exports.HttpManager = HttpManager;
+//# sourceMappingURL=http-manager.js.map
+
+/***/ }),
+
+/***/ 755:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const utils_1 = __nccwpck_require__(6327);
+const core = __importStar(__nccwpck_require__(2186));
+const config_variables_1 = __nccwpck_require__(2222);
+function retry(name, operation, customErrorMessages, maxAttempts) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let response = undefined;
+        let statusCode = undefined;
+        let isRetryable = false;
+        let errorMessage = '';
+        let customErrorInformation = undefined;
+        let attempt = 1;
+        while (attempt <= maxAttempts) {
+            try {
+                response = yield operation();
+                statusCode = response.message.statusCode;
+                if (utils_1.isSuccessStatusCode(statusCode)) {
+                    return response;
+                }
+                // Extra error information that we want to display if a particular response code is hit
+                if (statusCode) {
+                    customErrorInformation = customErrorMessages.get(statusCode);
+                }
+                isRetryable = utils_1.isRetryableStatusCode(statusCode);
+                errorMessage = `Artifact service responded with ${statusCode}`;
+            }
+            catch (error) {
+                isRetryable = true;
+                errorMessage = error.message;
+            }
+            if (!isRetryable) {
+                core.info(`${name} - Error is not retryable`);
+                if (response) {
+                    utils_1.displayHttpDiagnostics(response);
+                }
+                break;
+            }
+            core.info(`${name} - Attempt ${attempt} of ${maxAttempts} failed with error: ${errorMessage}`);
+            yield utils_1.sleep(utils_1.getExponentialRetryTimeInMilliseconds(attempt));
+            attempt++;
+        }
+        if (response) {
+            utils_1.displayHttpDiagnostics(response);
+        }
+        if (customErrorInformation) {
+            throw Error(`${name} failed: ${customErrorInformation}`);
+        }
+        throw Error(`${name} failed: ${errorMessage}`);
+    });
+}
+exports.retry = retry;
+function retryHttpClientRequest(name, method, customErrorMessages = new Map(), maxAttempts = config_variables_1.getRetryLimit()) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield retry(name, method, customErrorMessages, maxAttempts);
+    });
+}
+exports.retryHttpClientRequest = retryHttpClientRequest;
+//# sourceMappingURL=requestUtils.js.map
+
+/***/ }),
+
+/***/ 9081:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core_1 = __nccwpck_require__(2186);
+/**
+ * Status Reporter that displays information about the progress/status of an artifact that is being uploaded or downloaded
+ *
+ * Variable display time that can be adjusted using the displayFrequencyInMilliseconds variable
+ * The total status of the upload/download gets displayed according to this value
+ * If there is a large file that is being uploaded, extra information about the individual status can also be displayed using the updateLargeFileStatus function
+ */
+class StatusReporter {
+    constructor(displayFrequencyInMilliseconds) {
+        this.totalNumberOfFilesToProcess = 0;
+        this.processedCount = 0;
+        this.largeFiles = new Map();
+        this.totalFileStatus = undefined;
+        this.largeFileStatus = undefined;
+        this.displayFrequencyInMilliseconds = displayFrequencyInMilliseconds;
+    }
+    setTotalNumberOfFilesToProcess(fileTotal) {
+        this.totalNumberOfFilesToProcess = fileTotal;
+    }
+    start() {
+        // displays information about the total upload/download status
+        this.totalFileStatus = setInterval(() => {
+            // display 1 decimal place without any rounding
+            const percentage = this.formatPercentage(this.processedCount, this.totalNumberOfFilesToProcess);
+            core_1.info(`Total file count: ${this.totalNumberOfFilesToProcess} ---- Processed file #${this.processedCount} (${percentage.slice(0, percentage.indexOf('.') + 2)}%)`);
+        }, this.displayFrequencyInMilliseconds);
+        // displays extra information about any large files that take a significant amount of time to upload or download every 1 second
+        this.largeFileStatus = setInterval(() => {
+            for (const value of Array.from(this.largeFiles.values())) {
+                core_1.info(value);
+            }
+            // delete all entries in the map after displaying the information so it will not be displayed again unless explicitly added
+            this.largeFiles.clear();
+        }, 1000);
+    }
+    // if there is a large file that is being uploaded in chunks, this is used to display extra information about the status of the upload
+    updateLargeFileStatus(fileName, numerator, denominator) {
+        // display 1 decimal place without any rounding
+        const percentage = this.formatPercentage(numerator, denominator);
+        const displayInformation = `Uploading ${fileName} (${percentage.slice(0, percentage.indexOf('.') + 2)}%)`;
+        // any previously added display information should be overwritten for the specific large file because a map is being used
+        this.largeFiles.set(fileName, displayInformation);
+    }
+    stop() {
+        if (this.totalFileStatus) {
+            clearInterval(this.totalFileStatus);
+        }
+        if (this.largeFileStatus) {
+            clearInterval(this.largeFileStatus);
+        }
+    }
+    incrementProcessedCount() {
+        this.processedCount++;
+    }
+    formatPercentage(numerator, denominator) {
+        // toFixed() rounds, so use extra precision to display accurate information even though 4 decimal places are not displayed
+        return ((numerator / denominator) * 100).toFixed(4).toString();
+    }
+}
+exports.StatusReporter = StatusReporter;
+//# sourceMappingURL=status-reporter.js.map
+
+/***/ }),
+
+/***/ 606:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs = __importStar(__nccwpck_require__(5747));
+const zlib = __importStar(__nccwpck_require__(8761));
+const util_1 = __nccwpck_require__(1669);
+const stat = util_1.promisify(fs.stat);
+/**
+ * Creates a Gzip compressed file of an original file at the provided temporary filepath location
+ * @param {string} originalFilePath filepath of whatever will be compressed. The original file will be unmodified
+ * @param {string} tempFilePath the location of where the Gzip file will be created
+ * @returns the size of gzip file that gets created
+ */
+function createGZipFileOnDisk(originalFilePath, tempFilePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            const inputStream = fs.createReadStream(originalFilePath);
+            const gzip = zlib.createGzip();
+            const outputStream = fs.createWriteStream(tempFilePath);
+            inputStream.pipe(gzip).pipe(outputStream);
+            outputStream.on('finish', () => __awaiter(this, void 0, void 0, function* () {
+                // wait for stream to finish before calculating the size which is needed as part of the Content-Length header when starting an upload
+                const size = (yield stat(tempFilePath)).size;
+                resolve(size);
+            }));
+            outputStream.on('error', error => {
+                // eslint-disable-next-line no-console
+                console.log(error);
+                reject;
+            });
+        });
+    });
+}
+exports.createGZipFileOnDisk = createGZipFileOnDisk;
+/**
+ * Creates a GZip file in memory using a buffer. Should be used for smaller files to reduce disk I/O
+ * @param originalFilePath the path to the original file that is being GZipped
+ * @returns a buffer with the GZip file
+ */
+function createGZipFileInBuffer(originalFilePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+            var e_1, _a;
+            const inputStream = fs.createReadStream(originalFilePath);
+            const gzip = zlib.createGzip();
+            inputStream.pipe(gzip);
+            // read stream into buffer, using experimental async iterators see https://github.com/nodejs/readable-stream/issues/403#issuecomment-479069043
+            const chunks = [];
+            try {
+                for (var gzip_1 = __asyncValues(gzip), gzip_1_1; gzip_1_1 = yield gzip_1.next(), !gzip_1_1.done;) {
+                    const chunk = gzip_1_1.value;
+                    chunks.push(chunk);
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (gzip_1_1 && !gzip_1_1.done && (_a = gzip_1.return)) yield _a.call(gzip_1);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            resolve(Buffer.concat(chunks));
+        }));
+    });
+}
+exports.createGZipFileInBuffer = createGZipFileInBuffer;
+//# sourceMappingURL=upload-gzip.js.map
+
+/***/ }),
+
+/***/ 4354:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs = __importStar(__nccwpck_require__(5747));
+const core = __importStar(__nccwpck_require__(2186));
+const tmp = __importStar(__nccwpck_require__(8065));
+const stream = __importStar(__nccwpck_require__(2413));
+const utils_1 = __nccwpck_require__(6327);
+const config_variables_1 = __nccwpck_require__(2222);
+const util_1 = __nccwpck_require__(1669);
+const url_1 = __nccwpck_require__(8835);
+const perf_hooks_1 = __nccwpck_require__(630);
+const status_reporter_1 = __nccwpck_require__(9081);
+const http_client_1 = __nccwpck_require__(9925);
+const http_manager_1 = __nccwpck_require__(6527);
+const upload_gzip_1 = __nccwpck_require__(606);
+const requestUtils_1 = __nccwpck_require__(755);
+const stat = util_1.promisify(fs.stat);
+class UploadHttpClient {
+    constructor() {
+        this.uploadHttpManager = new http_manager_1.HttpManager(config_variables_1.getUploadFileConcurrency(), '@actions/artifact-upload');
+        this.statusReporter = new status_reporter_1.StatusReporter(10000);
+    }
+    /**
+     * Creates a file container for the new artifact in the remote blob storage/file service
+     * @param {string} artifactName Name of the artifact being created
+     * @returns The response from the Artifact Service if the file container was successfully created
+     */
+    createArtifactInFileContainer(artifactName, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const parameters = {
+                Type: 'actions_storage',
+                Name: artifactName
+            };
+            // calculate retention period
+            if (options && options.retentionDays) {
+                const maxRetentionStr = config_variables_1.getRetentionDays();
+                parameters.RetentionDays = utils_1.getProperRetention(options.retentionDays, maxRetentionStr);
+            }
+            const data = JSON.stringify(parameters, null, 2);
+            const artifactUrl = utils_1.getArtifactUrl();
+            // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
+            const client = this.uploadHttpManager.getClient(0);
+            const headers = utils_1.getUploadHeaders('application/json', false);
+            // Extra information to display when a particular HTTP code is returned
+            // If a 403 is returned when trying to create a file container, the customer has exceeded
+            // their storage quota so no new artifact containers can be created
+            const customErrorMessages = new Map([
+                [
+                    http_client_1.HttpCodes.Forbidden,
+                    'Artifact storage quota has been hit. Unable to upload any new artifacts'
+                ],
+                [
+                    http_client_1.HttpCodes.BadRequest,
+                    `The artifact name ${artifactName} is not valid. Request URL ${artifactUrl}`
+                ]
+            ]);
+            const response = yield requestUtils_1.retryHttpClientRequest('Create Artifact Container', () => __awaiter(this, void 0, void 0, function* () { return client.post(artifactUrl, data, headers); }), customErrorMessages);
+            const body = yield response.readBody();
+            return JSON.parse(body);
+        });
+    }
+    /**
+     * Concurrently upload all of the files in chunks
+     * @param {string} uploadUrl Base Url for the artifact that was created
+     * @param {SearchResult[]} filesToUpload A list of information about the files being uploaded
+     * @returns The size of all the files uploaded in bytes
+     */
+    uploadArtifactToFileContainer(uploadUrl, filesToUpload, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const FILE_CONCURRENCY = config_variables_1.getUploadFileConcurrency();
+            const MAX_CHUNK_SIZE = config_variables_1.getUploadChunkSize();
+            core.debug(`File Concurrency: ${FILE_CONCURRENCY}, and Chunk Size: ${MAX_CHUNK_SIZE}`);
+            const parameters = [];
+            // by default, file uploads will continue if there is an error unless specified differently in the options
+            let continueOnError = true;
+            if (options) {
+                if (options.continueOnError === false) {
+                    continueOnError = false;
+                }
+            }
+            // prepare the necessary parameters to upload all the files
+            for (const file of filesToUpload) {
+                const resourceUrl = new url_1.URL(uploadUrl);
+                resourceUrl.searchParams.append('itemPath', file.uploadFilePath);
+                parameters.push({
+                    file: file.absoluteFilePath,
+                    resourceUrl: resourceUrl.toString(),
+                    maxChunkSize: MAX_CHUNK_SIZE,
+                    continueOnError
+                });
+            }
+            const parallelUploads = [...new Array(FILE_CONCURRENCY).keys()];
+            const failedItemsToReport = [];
+            let currentFile = 0;
+            let completedFiles = 0;
+            let uploadFileSize = 0;
+            let totalFileSize = 0;
+            let abortPendingFileUploads = false;
+            this.statusReporter.setTotalNumberOfFilesToProcess(filesToUpload.length);
+            this.statusReporter.start();
+            // only allow a certain amount of files to be uploaded at once, this is done to reduce potential errors
+            yield Promise.all(parallelUploads.map((index) => __awaiter(this, void 0, void 0, function* () {
+                while (currentFile < filesToUpload.length) {
+                    const currentFileParameters = parameters[currentFile];
+                    currentFile += 1;
+                    if (abortPendingFileUploads) {
+                        failedItemsToReport.push(currentFileParameters.file);
+                        continue;
+                    }
+                    const startTime = perf_hooks_1.performance.now();
+                    const uploadFileResult = yield this.uploadFileAsync(index, currentFileParameters);
+                    if (core.isDebug()) {
+                        core.debug(`File: ${++completedFiles}/${filesToUpload.length}. ${currentFileParameters.file} took ${(perf_hooks_1.performance.now() - startTime).toFixed(3)} milliseconds to finish upload`);
+                    }
+                    uploadFileSize += uploadFileResult.successfulUploadSize;
+                    totalFileSize += uploadFileResult.totalSize;
+                    if (uploadFileResult.isSuccess === false) {
+                        failedItemsToReport.push(currentFileParameters.file);
+                        if (!continueOnError) {
+                            // fail fast
+                            core.error(`aborting artifact upload`);
+                            abortPendingFileUploads = true;
+                        }
+                    }
+                    this.statusReporter.incrementProcessedCount();
+                }
+            })));
+            this.statusReporter.stop();
+            // done uploading, safety dispose all connections
+            this.uploadHttpManager.disposeAndReplaceAllClients();
+            core.info(`Total size of all the files uploaded is ${uploadFileSize} bytes`);
+            return {
+                uploadSize: uploadFileSize,
+                totalSize: totalFileSize,
+                failedItems: failedItemsToReport
+            };
+        });
+    }
+    /**
+     * Asynchronously uploads a file. The file is compressed and uploaded using GZip if it is determined to save space.
+     * If the upload file is bigger than the max chunk size it will be uploaded via multiple calls
+     * @param {number} httpClientIndex The index of the httpClient that is being used to make all of the calls
+     * @param {UploadFileParameters} parameters Information about the file that needs to be uploaded
+     * @returns The size of the file that was uploaded in bytes along with any failed uploads
+     */
+    uploadFileAsync(httpClientIndex, parameters) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const totalFileSize = (yield stat(parameters.file)).size;
+            let offset = 0;
+            let isUploadSuccessful = true;
+            let failedChunkSizes = 0;
+            let uploadFileSize = 0;
+            let isGzip = true;
+            // the file that is being uploaded is less than 64k in size, to increase throughput and to minimize disk I/O
+            // for creating a new GZip file, an in-memory buffer is used for compression
+            if (totalFileSize < 65536) {
+                const buffer = yield upload_gzip_1.createGZipFileInBuffer(parameters.file);
+                //An open stream is needed in the event of a failure and we need to retry. If a NodeJS.ReadableStream is directly passed in,
+                // it will not properly get reset to the start of the stream if a chunk upload needs to be retried
+                let openUploadStream;
+                if (totalFileSize < buffer.byteLength) {
+                    // compression did not help with reducing the size, use a readable stream from the original file for upload
+                    openUploadStream = () => fs.createReadStream(parameters.file);
+                    isGzip = false;
+                    uploadFileSize = totalFileSize;
+                }
+                else {
+                    // create a readable stream using a PassThrough stream that is both readable and writable
+                    openUploadStream = () => {
+                        const passThrough = new stream.PassThrough();
+                        passThrough.end(buffer);
+                        return passThrough;
+                    };
+                    uploadFileSize = buffer.byteLength;
+                }
+                const result = yield this.uploadChunk(httpClientIndex, parameters.resourceUrl, openUploadStream, 0, uploadFileSize - 1, uploadFileSize, isGzip, totalFileSize);
+                if (!result) {
+                    // chunk failed to upload
+                    isUploadSuccessful = false;
+                    failedChunkSizes += uploadFileSize;
+                    core.warning(`Aborting upload for ${parameters.file} due to failure`);
+                }
+                return {
+                    isSuccess: isUploadSuccessful,
+                    successfulUploadSize: uploadFileSize - failedChunkSizes,
+                    totalSize: totalFileSize
+                };
+            }
+            else {
+                // the file that is being uploaded is greater than 64k in size, a temporary file gets created on disk using the
+                // npm tmp-promise package and this file gets used to create a GZipped file
+                const tempFile = yield tmp.file();
+                // create a GZip file of the original file being uploaded, the original file should not be modified in any way
+                uploadFileSize = yield upload_gzip_1.createGZipFileOnDisk(parameters.file, tempFile.path);
+                let uploadFilePath = tempFile.path;
+                // compression did not help with size reduction, use the original file for upload and delete the temp GZip file
+                if (totalFileSize < uploadFileSize) {
+                    uploadFileSize = totalFileSize;
+                    uploadFilePath = parameters.file;
+                    isGzip = false;
+                }
+                let abortFileUpload = false;
+                // upload only a single chunk at a time
+                while (offset < uploadFileSize) {
+                    const chunkSize = Math.min(uploadFileSize - offset, parameters.maxChunkSize);
+                    // if an individual file is greater than 100MB (1024*1024*100) in size, display extra information about the upload status
+                    if (uploadFileSize > 104857600) {
+                        this.statusReporter.updateLargeFileStatus(parameters.file, offset, uploadFileSize);
+                    }
+                    const start = offset;
+                    const end = offset + chunkSize - 1;
+                    offset += parameters.maxChunkSize;
+                    if (abortFileUpload) {
+                        // if we don't want to continue in the event of an error, any pending upload chunks will be marked as failed
+                        failedChunkSizes += chunkSize;
+                        continue;
+                    }
+                    const result = yield this.uploadChunk(httpClientIndex, parameters.resourceUrl, () => fs.createReadStream(uploadFilePath, {
+                        start,
+                        end,
+                        autoClose: false
+                    }), start, end, uploadFileSize, isGzip, totalFileSize);
+                    if (!result) {
+                        // Chunk failed to upload, report as failed and do not continue uploading any more chunks for the file. It is possible that part of a chunk was
+                        // successfully uploaded so the server may report a different size for what was uploaded
+                        isUploadSuccessful = false;
+                        failedChunkSizes += chunkSize;
+                        core.warning(`Aborting upload for ${parameters.file} due to failure`);
+                        abortFileUpload = true;
+                    }
+                }
+                // Delete the temporary file that was created as part of the upload. If the temp file does not get manually deleted by
+                // calling cleanup, it gets removed when the node process exits. For more info see: https://www.npmjs.com/package/tmp-promise#about
+                yield tempFile.cleanup();
+                return {
+                    isSuccess: isUploadSuccessful,
+                    successfulUploadSize: uploadFileSize - failedChunkSizes,
+                    totalSize: totalFileSize
+                };
+            }
+        });
+    }
+    /**
+     * Uploads a chunk of an individual file to the specified resourceUrl. If the upload fails and the status code
+     * indicates a retryable status, we try to upload the chunk as well
+     * @param {number} httpClientIndex The index of the httpClient being used to make all the necessary calls
+     * @param {string} resourceUrl Url of the resource that the chunk will be uploaded to
+     * @param {NodeJS.ReadableStream} openStream Stream of the file that will be uploaded
+     * @param {number} start Starting byte index of file that the chunk belongs to
+     * @param {number} end Ending byte index of file that the chunk belongs to
+     * @param {number} uploadFileSize Total size of the file in bytes that is being uploaded
+     * @param {boolean} isGzip Denotes if we are uploading a Gzip compressed stream
+     * @param {number} totalFileSize Original total size of the file that is being uploaded
+     * @returns if the chunk was successfully uploaded
+     */
+    uploadChunk(httpClientIndex, resourceUrl, openStream, start, end, uploadFileSize, isGzip, totalFileSize) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // prepare all the necessary headers before making any http call
+            const headers = utils_1.getUploadHeaders('application/octet-stream', true, isGzip, totalFileSize, end - start + 1, utils_1.getContentRange(start, end, uploadFileSize));
+            const uploadChunkRequest = () => __awaiter(this, void 0, void 0, function* () {
+                const client = this.uploadHttpManager.getClient(httpClientIndex);
+                return yield client.sendStream('PUT', resourceUrl, openStream(), headers);
+            });
+            let retryCount = 0;
+            const retryLimit = config_variables_1.getRetryLimit();
+            // Increments the current retry count and then checks if the retry limit has been reached
+            // If there have been too many retries, fail so the download stops
+            const incrementAndCheckRetryLimit = (response) => {
+                retryCount++;
+                if (retryCount > retryLimit) {
+                    if (response) {
+                        utils_1.displayHttpDiagnostics(response);
+                    }
+                    core.info(`Retry limit has been reached for chunk at offset ${start} to ${resourceUrl}`);
+                    return true;
+                }
+                return false;
+            };
+            const backOff = (retryAfterValue) => __awaiter(this, void 0, void 0, function* () {
+                this.uploadHttpManager.disposeAndReplaceClient(httpClientIndex);
+                if (retryAfterValue) {
+                    core.info(`Backoff due to too many requests, retry #${retryCount}. Waiting for ${retryAfterValue} milliseconds before continuing the upload`);
+                    yield utils_1.sleep(retryAfterValue);
+                }
+                else {
+                    const backoffTime = utils_1.getExponentialRetryTimeInMilliseconds(retryCount);
+                    core.info(`Exponential backoff for retry #${retryCount}. Waiting for ${backoffTime} milliseconds before continuing the upload at offset ${start}`);
+                    yield utils_1.sleep(backoffTime);
+                }
+                core.info(`Finished backoff for retry #${retryCount}, continuing with upload`);
+                return;
+            });
+            // allow for failed chunks to be retried multiple times
+            while (retryCount <= retryLimit) {
+                let response;
+                try {
+                    response = yield uploadChunkRequest();
+                }
+                catch (error) {
+                    // if an error is caught, it is usually indicative of a timeout so retry the upload
+                    core.info(`An error has been caught http-client index ${httpClientIndex}, retrying the upload`);
+                    // eslint-disable-next-line no-console
+                    console.log(error);
+                    if (incrementAndCheckRetryLimit()) {
+                        return false;
+                    }
+                    yield backOff();
+                    continue;
+                }
+                // Always read the body of the response. There is potential for a resource leak if the body is not read which will
+                // result in the connection remaining open along with unintended consequences when trying to dispose of the client
+                yield response.readBody();
+                if (utils_1.isSuccessStatusCode(response.message.statusCode)) {
+                    return true;
+                }
+                else if (utils_1.isRetryableStatusCode(response.message.statusCode)) {
+                    core.info(`A ${response.message.statusCode} status code has been received, will attempt to retry the upload`);
+                    if (incrementAndCheckRetryLimit(response)) {
+                        return false;
+                    }
+                    utils_1.isThrottledStatusCode(response.message.statusCode)
+                        ? yield backOff(utils_1.tryGetRetryAfterValueTimeInMilliseconds(response.message.headers))
+                        : yield backOff();
+                }
+                else {
+                    core.error(`Unexpected response. Unable to upload chunk to ${resourceUrl}`);
+                    utils_1.displayHttpDiagnostics(response);
+                    return false;
+                }
+            }
+            return false;
+        });
+    }
+    /**
+     * Updates the size of the artifact from -1 which was initially set when the container was first created for the artifact.
+     * Updating the size indicates that we are done uploading all the contents of the artifact
+     */
+    patchArtifactSize(size, artifactName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const resourceUrl = new url_1.URL(utils_1.getArtifactUrl());
+            resourceUrl.searchParams.append('artifactName', artifactName);
+            const parameters = { Size: size };
+            const data = JSON.stringify(parameters, null, 2);
+            core.debug(`URL is ${resourceUrl.toString()}`);
+            // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
+            const client = this.uploadHttpManager.getClient(0);
+            const headers = utils_1.getUploadHeaders('application/json', false);
+            // Extra information to display when a particular HTTP code is returned
+            const customErrorMessages = new Map([
+                [
+                    http_client_1.HttpCodes.NotFound,
+                    `An Artifact with the name ${artifactName} was not found`
+                ]
+            ]);
+            // TODO retry for all possible response codes, the artifact upload is pretty much complete so it at all costs we should try to finish this
+            const response = yield requestUtils_1.retryHttpClientRequest('Finalize artifact upload', () => __awaiter(this, void 0, void 0, function* () { return client.patch(resourceUrl.toString(), data, headers); }), customErrorMessages);
+            yield response.readBody();
+            core.debug(`Artifact ${artifactName} has been successfully uploaded, total size in bytes: ${size}`);
+        });
+    }
+}
+exports.UploadHttpClient = UploadHttpClient;
+//# sourceMappingURL=upload-http-client.js.map
+
+/***/ }),
+
+/***/ 183:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs = __importStar(__nccwpck_require__(5747));
+const core_1 = __nccwpck_require__(2186);
+const path_1 = __nccwpck_require__(5622);
+const utils_1 = __nccwpck_require__(6327);
+/**
+ * Creates a specification that describes how each file that is part of the artifact will be uploaded
+ * @param artifactName the name of the artifact being uploaded. Used during upload to denote where the artifact is stored on the server
+ * @param rootDirectory an absolute file path that denotes the path that should be removed from the beginning of each artifact file
+ * @param artifactFiles a list of absolute file paths that denote what should be uploaded as part of the artifact
+ */
+function getUploadSpecification(artifactName, rootDirectory, artifactFiles) {
+    utils_1.checkArtifactName(artifactName);
+    const specifications = [];
+    if (!fs.existsSync(rootDirectory)) {
+        throw new Error(`Provided rootDirectory ${rootDirectory} does not exist`);
+    }
+    if (!fs.lstatSync(rootDirectory).isDirectory()) {
+        throw new Error(`Provided rootDirectory ${rootDirectory} is not a valid directory`);
+    }
+    // Normalize and resolve, this allows for either absolute or relative paths to be used
+    rootDirectory = path_1.normalize(rootDirectory);
+    rootDirectory = path_1.resolve(rootDirectory);
+    /*
+       Example to demonstrate behavior
+       
+       Input:
+         artifactName: my-artifact
+         rootDirectory: '/home/user/files/plz-upload'
+         artifactFiles: [
+           '/home/user/files/plz-upload/file1.txt',
+           '/home/user/files/plz-upload/file2.txt',
+           '/home/user/files/plz-upload/dir/file3.txt'
+         ]
+       
+       Output:
+         specifications: [
+           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file1.txt'],
+           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file2.txt'],
+           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/dir/file3.txt']
+         ]
+    */
+    for (let file of artifactFiles) {
+        if (!fs.existsSync(file)) {
+            throw new Error(`File ${file} does not exist`);
+        }
+        if (!fs.lstatSync(file).isDirectory()) {
+            // Normalize and resolve, this allows for either absolute or relative paths to be used
+            file = path_1.normalize(file);
+            file = path_1.resolve(file);
+            if (!file.startsWith(rootDirectory)) {
+                throw new Error(`The rootDirectory: ${rootDirectory} is not a parent directory of the file: ${file}`);
+            }
+            // Check for forbidden characters in file paths that will be rejected during upload
+            const uploadPath = file.replace(rootDirectory, '');
+            utils_1.checkArtifactFilePath(uploadPath);
+            /*
+              uploadFilePath denotes where the file will be uploaded in the file container on the server. During a run, if multiple artifacts are uploaded, they will all
+              be saved in the same container. The artifact name is used as the root directory in the container to separate and distinguish uploaded artifacts
+      
+              path.join handles all the following cases and would return 'artifact-name/file-to-upload.txt
+                join('artifact-name/', 'file-to-upload.txt')
+                join('artifact-name/', '/file-to-upload.txt')
+                join('artifact-name', 'file-to-upload.txt')
+                join('artifact-name', '/file-to-upload.txt')
+            */
+            specifications.push({
+                absoluteFilePath: file,
+                uploadFilePath: path_1.join(artifactName, uploadPath)
+            });
+        }
+        else {
+            // Directories are rejected by the server during upload
+            core_1.debug(`Removing ${file} from rawSearchResults because it is a directory`);
+        }
+    }
+    return specifications;
+}
+exports.getUploadSpecification = getUploadSpecification;
+//# sourceMappingURL=upload-specification.js.map
+
+/***/ }),
+
+/***/ 6327:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core_1 = __nccwpck_require__(2186);
+const fs_1 = __nccwpck_require__(5747);
+const http_client_1 = __nccwpck_require__(9925);
+const auth_1 = __nccwpck_require__(3702);
+const config_variables_1 = __nccwpck_require__(2222);
+/**
+ * Returns a retry time in milliseconds that exponentially gets larger
+ * depending on the amount of retries that have been attempted
+ */
+function getExponentialRetryTimeInMilliseconds(retryCount) {
+    if (retryCount < 0) {
+        throw new Error('RetryCount should not be negative');
+    }
+    else if (retryCount === 0) {
+        return config_variables_1.getInitialRetryIntervalInMilliseconds();
+    }
+    const minTime = config_variables_1.getInitialRetryIntervalInMilliseconds() * config_variables_1.getRetryMultiplier() * retryCount;
+    const maxTime = minTime * config_variables_1.getRetryMultiplier();
+    // returns a random number between the minTime (inclusive) and the maxTime (exclusive)
+    return Math.random() * (maxTime - minTime) + minTime;
+}
+exports.getExponentialRetryTimeInMilliseconds = getExponentialRetryTimeInMilliseconds;
+/**
+ * Parses a env variable that is a number
+ */
+function parseEnvNumber(key) {
+    const value = Number(process.env[key]);
+    if (Number.isNaN(value) || value < 0) {
+        return undefined;
+    }
+    return value;
+}
+exports.parseEnvNumber = parseEnvNumber;
+/**
+ * Various utility functions to help with the necessary API calls
+ */
+function getApiVersion() {
+    return '6.0-preview';
+}
+exports.getApiVersion = getApiVersion;
+function isSuccessStatusCode(statusCode) {
+    if (!statusCode) {
+        return false;
+    }
+    return statusCode >= 200 && statusCode < 300;
+}
+exports.isSuccessStatusCode = isSuccessStatusCode;
+function isForbiddenStatusCode(statusCode) {
+    if (!statusCode) {
+        return false;
+    }
+    return statusCode === http_client_1.HttpCodes.Forbidden;
+}
+exports.isForbiddenStatusCode = isForbiddenStatusCode;
+function isRetryableStatusCode(statusCode) {
+    if (!statusCode) {
+        return false;
+    }
+    const retryableStatusCodes = [
+        http_client_1.HttpCodes.BadGateway,
+        http_client_1.HttpCodes.ServiceUnavailable,
+        http_client_1.HttpCodes.GatewayTimeout,
+        http_client_1.HttpCodes.TooManyRequests,
+        413 // Payload Too Large
+    ];
+    return retryableStatusCodes.includes(statusCode);
+}
+exports.isRetryableStatusCode = isRetryableStatusCode;
+function isThrottledStatusCode(statusCode) {
+    if (!statusCode) {
+        return false;
+    }
+    return statusCode === http_client_1.HttpCodes.TooManyRequests;
+}
+exports.isThrottledStatusCode = isThrottledStatusCode;
+/**
+ * Attempts to get the retry-after value from a set of http headers. The retry time
+ * is originally denoted in seconds, so if present, it is converted to milliseconds
+ * @param headers all the headers received when making an http call
+ */
+function tryGetRetryAfterValueTimeInMilliseconds(headers) {
+    if (headers['retry-after']) {
+        const retryTime = Number(headers['retry-after']);
+        if (!isNaN(retryTime)) {
+            core_1.info(`Retry-After header is present with a value of ${retryTime}`);
+            return retryTime * 1000;
+        }
+        core_1.info(`Returned retry-after header value: ${retryTime} is non-numeric and cannot be used`);
+        return undefined;
+    }
+    core_1.info(`No retry-after header was found. Dumping all headers for diagnostic purposes`);
+    // eslint-disable-next-line no-console
+    console.log(headers);
+    return undefined;
+}
+exports.tryGetRetryAfterValueTimeInMilliseconds = tryGetRetryAfterValueTimeInMilliseconds;
+function getContentRange(start, end, total) {
+    // Format: `bytes start-end/fileSize
+    // start and end are inclusive
+    // For a 200 byte chunk starting at byte 0:
+    // Content-Range: bytes 0-199/200
+    return `bytes ${start}-${end}/${total}`;
+}
+exports.getContentRange = getContentRange;
+/**
+ * Sets all the necessary headers when downloading an artifact
+ * @param {string} contentType the type of content being uploaded
+ * @param {boolean} isKeepAlive is the same connection being used to make multiple calls
+ * @param {boolean} acceptGzip can we accept a gzip encoded response
+ * @param {string} acceptType the type of content that we can accept
+ * @returns appropriate headers to make a specific http call during artifact download
+ */
+function getDownloadHeaders(contentType, isKeepAlive, acceptGzip) {
+    const requestOptions = {};
+    if (contentType) {
+        requestOptions['Content-Type'] = contentType;
+    }
+    if (isKeepAlive) {
+        requestOptions['Connection'] = 'Keep-Alive';
+        // keep alive for at least 10 seconds before closing the connection
+        requestOptions['Keep-Alive'] = '10';
+    }
+    if (acceptGzip) {
+        // if we are expecting a response with gzip encoding, it should be using an octet-stream in the accept header
+        requestOptions['Accept-Encoding'] = 'gzip';
+        requestOptions['Accept'] = `application/octet-stream;api-version=${getApiVersion()}`;
+    }
+    else {
+        // default to application/json if we are not working with gzip content
+        requestOptions['Accept'] = `application/json;api-version=${getApiVersion()}`;
+    }
+    return requestOptions;
+}
+exports.getDownloadHeaders = getDownloadHeaders;
+/**
+ * Sets all the necessary headers when uploading an artifact
+ * @param {string} contentType the type of content being uploaded
+ * @param {boolean} isKeepAlive is the same connection being used to make multiple calls
+ * @param {boolean} isGzip is the connection being used to upload GZip compressed content
+ * @param {number} uncompressedLength the original size of the content if something is being uploaded that has been compressed
+ * @param {number} contentLength the length of the content that is being uploaded
+ * @param {string} contentRange the range of the content that is being uploaded
+ * @returns appropriate headers to make a specific http call during artifact upload
+ */
+function getUploadHeaders(contentType, isKeepAlive, isGzip, uncompressedLength, contentLength, contentRange) {
+    const requestOptions = {};
+    requestOptions['Accept'] = `application/json;api-version=${getApiVersion()}`;
+    if (contentType) {
+        requestOptions['Content-Type'] = contentType;
+    }
+    if (isKeepAlive) {
+        requestOptions['Connection'] = 'Keep-Alive';
+        // keep alive for at least 10 seconds before closing the connection
+        requestOptions['Keep-Alive'] = '10';
+    }
+    if (isGzip) {
+        requestOptions['Content-Encoding'] = 'gzip';
+        requestOptions['x-tfs-filelength'] = uncompressedLength;
+    }
+    if (contentLength) {
+        requestOptions['Content-Length'] = contentLength;
+    }
+    if (contentRange) {
+        requestOptions['Content-Range'] = contentRange;
+    }
+    return requestOptions;
+}
+exports.getUploadHeaders = getUploadHeaders;
+function createHttpClient(userAgent) {
+    return new http_client_1.HttpClient(userAgent, [
+        new auth_1.BearerCredentialHandler(config_variables_1.getRuntimeToken())
+    ]);
+}
+exports.createHttpClient = createHttpClient;
+function getArtifactUrl() {
+    const artifactUrl = `${config_variables_1.getRuntimeUrl()}_apis/pipelines/workflows/${config_variables_1.getWorkFlowRunId()}/artifacts?api-version=${getApiVersion()}`;
+    core_1.debug(`Artifact Url: ${artifactUrl}`);
+    return artifactUrl;
+}
+exports.getArtifactUrl = getArtifactUrl;
+/**
+ * Uh oh! Something might have gone wrong during either upload or download. The IHtttpClientResponse object contains information
+ * about the http call that was made by the actions http client. This information might be useful to display for diagnostic purposes, but
+ * this entire object is really big and most of the information is not really useful. This function takes the response object and displays only
+ * the information that we want.
+ *
+ * Certain information such as the TLSSocket and the Readable state are not really useful for diagnostic purposes so they can be avoided.
+ * Other information such as the headers, the response code and message might be useful, so this is displayed.
+ */
+function displayHttpDiagnostics(response) {
+    core_1.info(`##### Begin Diagnostic HTTP information #####
+Status Code: ${response.message.statusCode}
+Status Message: ${response.message.statusMessage}
+Header Information: ${JSON.stringify(response.message.headers, undefined, 2)}
+###### End Diagnostic HTTP information ######`);
+}
+exports.displayHttpDiagnostics = displayHttpDiagnostics;
+/**
+ * Invalid characters that cannot be in the artifact name or an uploaded file. Will be rejected
+ * from the server if attempted to be sent over. These characters are not allowed due to limitations with certain
+ * file systems such as NTFS. To maintain platform-agnostic behavior, all characters that are not supported by an
+ * individual filesystem/platform will not be supported on all fileSystems/platforms
+ *
+ * FilePaths can include characters such as \ and / which are not permitted in the artifact name alone
+ */
+const invalidArtifactFilePathCharacters = ['"', ':', '<', '>', '|', '*', '?'];
+const invalidArtifactNameCharacters = [
+    ...invalidArtifactFilePathCharacters,
+    '\\',
+    '/'
+];
+/**
+ * Scans the name of the artifact to make sure there are no illegal characters
+ */
+function checkArtifactName(name) {
+    if (!name) {
+        throw new Error(`Artifact name: ${name}, is incorrectly provided`);
+    }
+    for (const invalidChar of invalidArtifactNameCharacters) {
+        if (name.includes(invalidChar)) {
+            throw new Error(`Artifact name is not valid: ${name}. Contains character: "${invalidChar}". Invalid artifact name characters include: ${invalidArtifactNameCharacters.toString()}.`);
+        }
+    }
+}
+exports.checkArtifactName = checkArtifactName;
+/**
+ * Scans the name of the filePath used to make sure there are no illegal characters
+ */
+function checkArtifactFilePath(path) {
+    if (!path) {
+        throw new Error(`Artifact path: ${path}, is incorrectly provided`);
+    }
+    for (const invalidChar of invalidArtifactFilePathCharacters) {
+        if (path.includes(invalidChar)) {
+            throw new Error(`Artifact path is not valid: ${path}. Contains character: "${invalidChar}". Invalid characters include: ${invalidArtifactFilePathCharacters.toString()}.`);
+        }
+    }
+}
+exports.checkArtifactFilePath = checkArtifactFilePath;
+function createDirectoriesForArtifact(directories) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const directory of directories) {
+            yield fs_1.promises.mkdir(directory, {
+                recursive: true
+            });
+        }
+    });
+}
+exports.createDirectoriesForArtifact = createDirectoriesForArtifact;
+function createEmptyFilesForArtifact(emptyFilesToCreate) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const filePath of emptyFilesToCreate) {
+            yield (yield fs_1.promises.open(filePath, 'w')).close();
+        }
+    });
+}
+exports.createEmptyFilesForArtifact = createEmptyFilesForArtifact;
+function getFileSize(filePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const stats = yield fs_1.promises.stat(filePath);
+        core_1.debug(`${filePath} size:(${stats.size}) blksize:(${stats.blksize}) blocks:(${stats.blocks})`);
+        return stats.size;
+    });
+}
+exports.getFileSize = getFileSize;
+function rmFile(filePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield fs_1.promises.unlink(filePath);
+    });
+}
+exports.rmFile = rmFile;
+function getProperRetention(retentionInput, retentionSetting) {
+    if (retentionInput < 0) {
+        throw new Error('Invalid retention, minimum value is 1.');
+    }
+    let retention = retentionInput;
+    if (retentionSetting) {
+        const maxRetention = parseInt(retentionSetting);
+        if (!isNaN(maxRetention) && maxRetention < retention) {
+            core_1.warning(`Retention days is greater than the max value allowed by the repository setting, reduce retention to ${maxRetention} days`);
+            retention = maxRetention;
+        }
+    }
+    return retention;
+}
+exports.getProperRetention = getProperRetention;
+function sleep(milliseconds) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise(resolve => setTimeout(resolve, milliseconds));
+    });
+}
+exports.sleep = sleep;
+//# sourceMappingURL=utils.js.map
+
+/***/ }),
+
+/***/ 7351:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const os = __importStar(__nccwpck_require__(2087));
+const utils_1 = __nccwpck_require__(5278);
 /**
  * Commands
  *
@@ -90,7 +1771,7 @@ function escapeProperty(s) {
 
 /***/ }),
 
-/***/ 186:
+/***/ 2186:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -112,11 +1793,11 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const command_1 = __nccwpck_require__(351);
-const file_command_1 = __nccwpck_require__(185);
-const utils_1 = __nccwpck_require__(278);
-const os = __importStar(__nccwpck_require__(87));
-const path = __importStar(__nccwpck_require__(622));
+const command_1 = __nccwpck_require__(7351);
+const file_command_1 = __nccwpck_require__(717);
+const utils_1 = __nccwpck_require__(5278);
+const os = __importStar(__nccwpck_require__(2087));
+const path = __importStar(__nccwpck_require__(5622));
 /**
  * The code to exit an action
  */
@@ -335,7 +2016,7 @@ exports.getState = getState;
 
 /***/ }),
 
-/***/ 185:
+/***/ 717:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -351,9 +2032,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const fs = __importStar(__nccwpck_require__(747));
-const os = __importStar(__nccwpck_require__(87));
-const utils_1 = __nccwpck_require__(278);
+const fs = __importStar(__nccwpck_require__(5747));
+const os = __importStar(__nccwpck_require__(2087));
+const utils_1 = __nccwpck_require__(5278);
 function issueCommand(command, message) {
     const filePath = process.env[`GITHUB_${command}`];
     if (!filePath) {
@@ -371,7 +2052,7 @@ exports.issueCommand = issueCommand;
 
 /***/ }),
 
-/***/ 278:
+/***/ 5278:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -397,7 +2078,681 @@ exports.toCommandValue = toCommandValue;
 
 /***/ }),
 
-/***/ 417:
+/***/ 3702:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+class BasicCredentialHandler {
+    constructor(username, password) {
+        this.username = username;
+        this.password = password;
+    }
+    prepareRequest(options) {
+        options.headers['Authorization'] =
+            'Basic ' +
+                Buffer.from(this.username + ':' + this.password).toString('base64');
+    }
+    // This handler cannot handle 401
+    canHandleAuthentication(response) {
+        return false;
+    }
+    handleAuthentication(httpClient, requestInfo, objs) {
+        return null;
+    }
+}
+exports.BasicCredentialHandler = BasicCredentialHandler;
+class BearerCredentialHandler {
+    constructor(token) {
+        this.token = token;
+    }
+    // currently implements pre-authorization
+    // TODO: support preAuth = false where it hooks on 401
+    prepareRequest(options) {
+        options.headers['Authorization'] = 'Bearer ' + this.token;
+    }
+    // This handler cannot handle 401
+    canHandleAuthentication(response) {
+        return false;
+    }
+    handleAuthentication(httpClient, requestInfo, objs) {
+        return null;
+    }
+}
+exports.BearerCredentialHandler = BearerCredentialHandler;
+class PersonalAccessTokenCredentialHandler {
+    constructor(token) {
+        this.token = token;
+    }
+    // currently implements pre-authorization
+    // TODO: support preAuth = false where it hooks on 401
+    prepareRequest(options) {
+        options.headers['Authorization'] =
+            'Basic ' + Buffer.from('PAT:' + this.token).toString('base64');
+    }
+    // This handler cannot handle 401
+    canHandleAuthentication(response) {
+        return false;
+    }
+    handleAuthentication(httpClient, requestInfo, objs) {
+        return null;
+    }
+}
+exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
+
+
+/***/ }),
+
+/***/ 9925:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const http = __nccwpck_require__(8605);
+const https = __nccwpck_require__(7211);
+const pm = __nccwpck_require__(6443);
+let tunnel;
+var HttpCodes;
+(function (HttpCodes) {
+    HttpCodes[HttpCodes["OK"] = 200] = "OK";
+    HttpCodes[HttpCodes["MultipleChoices"] = 300] = "MultipleChoices";
+    HttpCodes[HttpCodes["MovedPermanently"] = 301] = "MovedPermanently";
+    HttpCodes[HttpCodes["ResourceMoved"] = 302] = "ResourceMoved";
+    HttpCodes[HttpCodes["SeeOther"] = 303] = "SeeOther";
+    HttpCodes[HttpCodes["NotModified"] = 304] = "NotModified";
+    HttpCodes[HttpCodes["UseProxy"] = 305] = "UseProxy";
+    HttpCodes[HttpCodes["SwitchProxy"] = 306] = "SwitchProxy";
+    HttpCodes[HttpCodes["TemporaryRedirect"] = 307] = "TemporaryRedirect";
+    HttpCodes[HttpCodes["PermanentRedirect"] = 308] = "PermanentRedirect";
+    HttpCodes[HttpCodes["BadRequest"] = 400] = "BadRequest";
+    HttpCodes[HttpCodes["Unauthorized"] = 401] = "Unauthorized";
+    HttpCodes[HttpCodes["PaymentRequired"] = 402] = "PaymentRequired";
+    HttpCodes[HttpCodes["Forbidden"] = 403] = "Forbidden";
+    HttpCodes[HttpCodes["NotFound"] = 404] = "NotFound";
+    HttpCodes[HttpCodes["MethodNotAllowed"] = 405] = "MethodNotAllowed";
+    HttpCodes[HttpCodes["NotAcceptable"] = 406] = "NotAcceptable";
+    HttpCodes[HttpCodes["ProxyAuthenticationRequired"] = 407] = "ProxyAuthenticationRequired";
+    HttpCodes[HttpCodes["RequestTimeout"] = 408] = "RequestTimeout";
+    HttpCodes[HttpCodes["Conflict"] = 409] = "Conflict";
+    HttpCodes[HttpCodes["Gone"] = 410] = "Gone";
+    HttpCodes[HttpCodes["TooManyRequests"] = 429] = "TooManyRequests";
+    HttpCodes[HttpCodes["InternalServerError"] = 500] = "InternalServerError";
+    HttpCodes[HttpCodes["NotImplemented"] = 501] = "NotImplemented";
+    HttpCodes[HttpCodes["BadGateway"] = 502] = "BadGateway";
+    HttpCodes[HttpCodes["ServiceUnavailable"] = 503] = "ServiceUnavailable";
+    HttpCodes[HttpCodes["GatewayTimeout"] = 504] = "GatewayTimeout";
+})(HttpCodes = exports.HttpCodes || (exports.HttpCodes = {}));
+var Headers;
+(function (Headers) {
+    Headers["Accept"] = "accept";
+    Headers["ContentType"] = "content-type";
+})(Headers = exports.Headers || (exports.Headers = {}));
+var MediaTypes;
+(function (MediaTypes) {
+    MediaTypes["ApplicationJson"] = "application/json";
+})(MediaTypes = exports.MediaTypes || (exports.MediaTypes = {}));
+/**
+ * Returns the proxy URL, depending upon the supplied url and proxy environment variables.
+ * @param serverUrl  The server URL where the request will be sent. For example, https://api.github.com
+ */
+function getProxyUrl(serverUrl) {
+    let proxyUrl = pm.getProxyUrl(new URL(serverUrl));
+    return proxyUrl ? proxyUrl.href : '';
+}
+exports.getProxyUrl = getProxyUrl;
+const HttpRedirectCodes = [
+    HttpCodes.MovedPermanently,
+    HttpCodes.ResourceMoved,
+    HttpCodes.SeeOther,
+    HttpCodes.TemporaryRedirect,
+    HttpCodes.PermanentRedirect
+];
+const HttpResponseRetryCodes = [
+    HttpCodes.BadGateway,
+    HttpCodes.ServiceUnavailable,
+    HttpCodes.GatewayTimeout
+];
+const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
+const ExponentialBackoffCeiling = 10;
+const ExponentialBackoffTimeSlice = 5;
+class HttpClientError extends Error {
+    constructor(message, statusCode) {
+        super(message);
+        this.name = 'HttpClientError';
+        this.statusCode = statusCode;
+        Object.setPrototypeOf(this, HttpClientError.prototype);
+    }
+}
+exports.HttpClientError = HttpClientError;
+class HttpClientResponse {
+    constructor(message) {
+        this.message = message;
+    }
+    readBody() {
+        return new Promise(async (resolve, reject) => {
+            let output = Buffer.alloc(0);
+            this.message.on('data', (chunk) => {
+                output = Buffer.concat([output, chunk]);
+            });
+            this.message.on('end', () => {
+                resolve(output.toString());
+            });
+        });
+    }
+}
+exports.HttpClientResponse = HttpClientResponse;
+function isHttps(requestUrl) {
+    let parsedUrl = new URL(requestUrl);
+    return parsedUrl.protocol === 'https:';
+}
+exports.isHttps = isHttps;
+class HttpClient {
+    constructor(userAgent, handlers, requestOptions) {
+        this._ignoreSslError = false;
+        this._allowRedirects = true;
+        this._allowRedirectDowngrade = false;
+        this._maxRedirects = 50;
+        this._allowRetries = false;
+        this._maxRetries = 1;
+        this._keepAlive = false;
+        this._disposed = false;
+        this.userAgent = userAgent;
+        this.handlers = handlers || [];
+        this.requestOptions = requestOptions;
+        if (requestOptions) {
+            if (requestOptions.ignoreSslError != null) {
+                this._ignoreSslError = requestOptions.ignoreSslError;
+            }
+            this._socketTimeout = requestOptions.socketTimeout;
+            if (requestOptions.allowRedirects != null) {
+                this._allowRedirects = requestOptions.allowRedirects;
+            }
+            if (requestOptions.allowRedirectDowngrade != null) {
+                this._allowRedirectDowngrade = requestOptions.allowRedirectDowngrade;
+            }
+            if (requestOptions.maxRedirects != null) {
+                this._maxRedirects = Math.max(requestOptions.maxRedirects, 0);
+            }
+            if (requestOptions.keepAlive != null) {
+                this._keepAlive = requestOptions.keepAlive;
+            }
+            if (requestOptions.allowRetries != null) {
+                this._allowRetries = requestOptions.allowRetries;
+            }
+            if (requestOptions.maxRetries != null) {
+                this._maxRetries = requestOptions.maxRetries;
+            }
+        }
+    }
+    options(requestUrl, additionalHeaders) {
+        return this.request('OPTIONS', requestUrl, null, additionalHeaders || {});
+    }
+    get(requestUrl, additionalHeaders) {
+        return this.request('GET', requestUrl, null, additionalHeaders || {});
+    }
+    del(requestUrl, additionalHeaders) {
+        return this.request('DELETE', requestUrl, null, additionalHeaders || {});
+    }
+    post(requestUrl, data, additionalHeaders) {
+        return this.request('POST', requestUrl, data, additionalHeaders || {});
+    }
+    patch(requestUrl, data, additionalHeaders) {
+        return this.request('PATCH', requestUrl, data, additionalHeaders || {});
+    }
+    put(requestUrl, data, additionalHeaders) {
+        return this.request('PUT', requestUrl, data, additionalHeaders || {});
+    }
+    head(requestUrl, additionalHeaders) {
+        return this.request('HEAD', requestUrl, null, additionalHeaders || {});
+    }
+    sendStream(verb, requestUrl, stream, additionalHeaders) {
+        return this.request(verb, requestUrl, stream, additionalHeaders);
+    }
+    /**
+     * Gets a typed object from an endpoint
+     * Be aware that not found returns a null.  Other errors (4xx, 5xx) reject the promise
+     */
+    async getJson(requestUrl, additionalHeaders = {}) {
+        additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+        let res = await this.get(requestUrl, additionalHeaders);
+        return this._processResponse(res, this.requestOptions);
+    }
+    async postJson(requestUrl, obj, additionalHeaders = {}) {
+        let data = JSON.stringify(obj, null, 2);
+        additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+        additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+        let res = await this.post(requestUrl, data, additionalHeaders);
+        return this._processResponse(res, this.requestOptions);
+    }
+    async putJson(requestUrl, obj, additionalHeaders = {}) {
+        let data = JSON.stringify(obj, null, 2);
+        additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+        additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+        let res = await this.put(requestUrl, data, additionalHeaders);
+        return this._processResponse(res, this.requestOptions);
+    }
+    async patchJson(requestUrl, obj, additionalHeaders = {}) {
+        let data = JSON.stringify(obj, null, 2);
+        additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+        additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+        let res = await this.patch(requestUrl, data, additionalHeaders);
+        return this._processResponse(res, this.requestOptions);
+    }
+    /**
+     * Makes a raw http request.
+     * All other methods such as get, post, patch, and request ultimately call this.
+     * Prefer get, del, post and patch
+     */
+    async request(verb, requestUrl, data, headers) {
+        if (this._disposed) {
+            throw new Error('Client has already been disposed.');
+        }
+        let parsedUrl = new URL(requestUrl);
+        let info = this._prepareRequest(verb, parsedUrl, headers);
+        // Only perform retries on reads since writes may not be idempotent.
+        let maxTries = this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1
+            ? this._maxRetries + 1
+            : 1;
+        let numTries = 0;
+        let response;
+        while (numTries < maxTries) {
+            response = await this.requestRaw(info, data);
+            // Check if it's an authentication challenge
+            if (response &&
+                response.message &&
+                response.message.statusCode === HttpCodes.Unauthorized) {
+                let authenticationHandler;
+                for (let i = 0; i < this.handlers.length; i++) {
+                    if (this.handlers[i].canHandleAuthentication(response)) {
+                        authenticationHandler = this.handlers[i];
+                        break;
+                    }
+                }
+                if (authenticationHandler) {
+                    return authenticationHandler.handleAuthentication(this, info, data);
+                }
+                else {
+                    // We have received an unauthorized response but have no handlers to handle it.
+                    // Let the response return to the caller.
+                    return response;
+                }
+            }
+            let redirectsRemaining = this._maxRedirects;
+            while (HttpRedirectCodes.indexOf(response.message.statusCode) != -1 &&
+                this._allowRedirects &&
+                redirectsRemaining > 0) {
+                const redirectUrl = response.message.headers['location'];
+                if (!redirectUrl) {
+                    // if there's no location to redirect to, we won't
+                    break;
+                }
+                let parsedRedirectUrl = new URL(redirectUrl);
+                if (parsedUrl.protocol == 'https:' &&
+                    parsedUrl.protocol != parsedRedirectUrl.protocol &&
+                    !this._allowRedirectDowngrade) {
+                    throw new Error('Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.');
+                }
+                // we need to finish reading the response before reassigning response
+                // which will leak the open socket.
+                await response.readBody();
+                // strip authorization header if redirected to a different hostname
+                if (parsedRedirectUrl.hostname !== parsedUrl.hostname) {
+                    for (let header in headers) {
+                        // header names are case insensitive
+                        if (header.toLowerCase() === 'authorization') {
+                            delete headers[header];
+                        }
+                    }
+                }
+                // let's make the request with the new redirectUrl
+                info = this._prepareRequest(verb, parsedRedirectUrl, headers);
+                response = await this.requestRaw(info, data);
+                redirectsRemaining--;
+            }
+            if (HttpResponseRetryCodes.indexOf(response.message.statusCode) == -1) {
+                // If not a retry code, return immediately instead of retrying
+                return response;
+            }
+            numTries += 1;
+            if (numTries < maxTries) {
+                await response.readBody();
+                await this._performExponentialBackoff(numTries);
+            }
+        }
+        return response;
+    }
+    /**
+     * Needs to be called if keepAlive is set to true in request options.
+     */
+    dispose() {
+        if (this._agent) {
+            this._agent.destroy();
+        }
+        this._disposed = true;
+    }
+    /**
+     * Raw request.
+     * @param info
+     * @param data
+     */
+    requestRaw(info, data) {
+        return new Promise((resolve, reject) => {
+            let callbackForResult = function (err, res) {
+                if (err) {
+                    reject(err);
+                }
+                resolve(res);
+            };
+            this.requestRawWithCallback(info, data, callbackForResult);
+        });
+    }
+    /**
+     * Raw request with callback.
+     * @param info
+     * @param data
+     * @param onResult
+     */
+    requestRawWithCallback(info, data, onResult) {
+        let socket;
+        if (typeof data === 'string') {
+            info.options.headers['Content-Length'] = Buffer.byteLength(data, 'utf8');
+        }
+        let callbackCalled = false;
+        let handleResult = (err, res) => {
+            if (!callbackCalled) {
+                callbackCalled = true;
+                onResult(err, res);
+            }
+        };
+        let req = info.httpModule.request(info.options, (msg) => {
+            let res = new HttpClientResponse(msg);
+            handleResult(null, res);
+        });
+        req.on('socket', sock => {
+            socket = sock;
+        });
+        // If we ever get disconnected, we want the socket to timeout eventually
+        req.setTimeout(this._socketTimeout || 3 * 60000, () => {
+            if (socket) {
+                socket.end();
+            }
+            handleResult(new Error('Request timeout: ' + info.options.path), null);
+        });
+        req.on('error', function (err) {
+            // err has statusCode property
+            // res should have headers
+            handleResult(err, null);
+        });
+        if (data && typeof data === 'string') {
+            req.write(data, 'utf8');
+        }
+        if (data && typeof data !== 'string') {
+            data.on('close', function () {
+                req.end();
+            });
+            data.pipe(req);
+        }
+        else {
+            req.end();
+        }
+    }
+    /**
+     * Gets an http agent. This function is useful when you need an http agent that handles
+     * routing through a proxy server - depending upon the url and proxy environment variables.
+     * @param serverUrl  The server URL where the request will be sent. For example, https://api.github.com
+     */
+    getAgent(serverUrl) {
+        let parsedUrl = new URL(serverUrl);
+        return this._getAgent(parsedUrl);
+    }
+    _prepareRequest(method, requestUrl, headers) {
+        const info = {};
+        info.parsedUrl = requestUrl;
+        const usingSsl = info.parsedUrl.protocol === 'https:';
+        info.httpModule = usingSsl ? https : http;
+        const defaultPort = usingSsl ? 443 : 80;
+        info.options = {};
+        info.options.host = info.parsedUrl.hostname;
+        info.options.port = info.parsedUrl.port
+            ? parseInt(info.parsedUrl.port)
+            : defaultPort;
+        info.options.path =
+            (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
+        info.options.method = method;
+        info.options.headers = this._mergeHeaders(headers);
+        if (this.userAgent != null) {
+            info.options.headers['user-agent'] = this.userAgent;
+        }
+        info.options.agent = this._getAgent(info.parsedUrl);
+        // gives handlers an opportunity to participate
+        if (this.handlers) {
+            this.handlers.forEach(handler => {
+                handler.prepareRequest(info.options);
+            });
+        }
+        return info;
+    }
+    _mergeHeaders(headers) {
+        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
+        if (this.requestOptions && this.requestOptions.headers) {
+            return Object.assign({}, lowercaseKeys(this.requestOptions.headers), lowercaseKeys(headers));
+        }
+        return lowercaseKeys(headers || {});
+    }
+    _getExistingOrDefaultHeader(additionalHeaders, header, _default) {
+        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
+        let clientHeader;
+        if (this.requestOptions && this.requestOptions.headers) {
+            clientHeader = lowercaseKeys(this.requestOptions.headers)[header];
+        }
+        return additionalHeaders[header] || clientHeader || _default;
+    }
+    _getAgent(parsedUrl) {
+        let agent;
+        let proxyUrl = pm.getProxyUrl(parsedUrl);
+        let useProxy = proxyUrl && proxyUrl.hostname;
+        if (this._keepAlive && useProxy) {
+            agent = this._proxyAgent;
+        }
+        if (this._keepAlive && !useProxy) {
+            agent = this._agent;
+        }
+        // if agent is already assigned use that agent.
+        if (!!agent) {
+            return agent;
+        }
+        const usingSsl = parsedUrl.protocol === 'https:';
+        let maxSockets = 100;
+        if (!!this.requestOptions) {
+            maxSockets = this.requestOptions.maxSockets || http.globalAgent.maxSockets;
+        }
+        if (useProxy) {
+            // If using proxy, need tunnel
+            if (!tunnel) {
+                tunnel = __nccwpck_require__(4294);
+            }
+            const agentOptions = {
+                maxSockets: maxSockets,
+                keepAlive: this._keepAlive,
+                proxy: {
+                    proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`,
+                    host: proxyUrl.hostname,
+                    port: proxyUrl.port
+                }
+            };
+            let tunnelAgent;
+            const overHttps = proxyUrl.protocol === 'https:';
+            if (usingSsl) {
+                tunnelAgent = overHttps ? tunnel.httpsOverHttps : tunnel.httpsOverHttp;
+            }
+            else {
+                tunnelAgent = overHttps ? tunnel.httpOverHttps : tunnel.httpOverHttp;
+            }
+            agent = tunnelAgent(agentOptions);
+            this._proxyAgent = agent;
+        }
+        // if reusing agent across request and tunneling agent isn't assigned create a new agent
+        if (this._keepAlive && !agent) {
+            const options = { keepAlive: this._keepAlive, maxSockets: maxSockets };
+            agent = usingSsl ? new https.Agent(options) : new http.Agent(options);
+            this._agent = agent;
+        }
+        // if not using private agent and tunnel agent isn't setup then use global agent
+        if (!agent) {
+            agent = usingSsl ? https.globalAgent : http.globalAgent;
+        }
+        if (usingSsl && this._ignoreSslError) {
+            // we don't want to set NODE_TLS_REJECT_UNAUTHORIZED=0 since that will affect request for entire process
+            // http.RequestOptions doesn't expose a way to modify RequestOptions.agent.options
+            // we have to cast it to any and change it directly
+            agent.options = Object.assign(agent.options || {}, {
+                rejectUnauthorized: false
+            });
+        }
+        return agent;
+    }
+    _performExponentialBackoff(retryNumber) {
+        retryNumber = Math.min(ExponentialBackoffCeiling, retryNumber);
+        const ms = ExponentialBackoffTimeSlice * Math.pow(2, retryNumber);
+        return new Promise(resolve => setTimeout(() => resolve(), ms));
+    }
+    static dateTimeDeserializer(key, value) {
+        if (typeof value === 'string') {
+            let a = new Date(value);
+            if (!isNaN(a.valueOf())) {
+                return a;
+            }
+        }
+        return value;
+    }
+    async _processResponse(res, options) {
+        return new Promise(async (resolve, reject) => {
+            const statusCode = res.message.statusCode;
+            const response = {
+                statusCode: statusCode,
+                result: null,
+                headers: {}
+            };
+            // not found leads to null obj returned
+            if (statusCode == HttpCodes.NotFound) {
+                resolve(response);
+            }
+            let obj;
+            let contents;
+            // get the result from the body
+            try {
+                contents = await res.readBody();
+                if (contents && contents.length > 0) {
+                    if (options && options.deserializeDates) {
+                        obj = JSON.parse(contents, HttpClient.dateTimeDeserializer);
+                    }
+                    else {
+                        obj = JSON.parse(contents);
+                    }
+                    response.result = obj;
+                }
+                response.headers = res.message.headers;
+            }
+            catch (err) {
+                // Invalid resource (contents not json);  leaving result obj null
+            }
+            // note that 3xx redirects are handled by the http layer.
+            if (statusCode > 299) {
+                let msg;
+                // if exception/error in body, attempt to get better error
+                if (obj && obj.message) {
+                    msg = obj.message;
+                }
+                else if (contents && contents.length > 0) {
+                    // it may be the case that the exception is in the body message as string
+                    msg = contents;
+                }
+                else {
+                    msg = 'Failed request: (' + statusCode + ')';
+                }
+                let err = new HttpClientError(msg, statusCode);
+                err.result = response.result;
+                reject(err);
+            }
+            else {
+                resolve(response);
+            }
+        });
+    }
+}
+exports.HttpClient = HttpClient;
+
+
+/***/ }),
+
+/***/ 6443:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+function getProxyUrl(reqUrl) {
+    let usingSsl = reqUrl.protocol === 'https:';
+    let proxyUrl;
+    if (checkBypass(reqUrl)) {
+        return proxyUrl;
+    }
+    let proxyVar;
+    if (usingSsl) {
+        proxyVar = process.env['https_proxy'] || process.env['HTTPS_PROXY'];
+    }
+    else {
+        proxyVar = process.env['http_proxy'] || process.env['HTTP_PROXY'];
+    }
+    if (proxyVar) {
+        proxyUrl = new URL(proxyVar);
+    }
+    return proxyUrl;
+}
+exports.getProxyUrl = getProxyUrl;
+function checkBypass(reqUrl) {
+    if (!reqUrl.hostname) {
+        return false;
+    }
+    let noProxy = process.env['no_proxy'] || process.env['NO_PROXY'] || '';
+    if (!noProxy) {
+        return false;
+    }
+    // Determine the request port
+    let reqPort;
+    if (reqUrl.port) {
+        reqPort = Number(reqUrl.port);
+    }
+    else if (reqUrl.protocol === 'http:') {
+        reqPort = 80;
+    }
+    else if (reqUrl.protocol === 'https:') {
+        reqPort = 443;
+    }
+    // Format the request hostname and hostname with port
+    let upperReqHosts = [reqUrl.hostname.toUpperCase()];
+    if (typeof reqPort === 'number') {
+        upperReqHosts.push(`${upperReqHosts[0]}:${reqPort}`);
+    }
+    // Compare request host against noproxy
+    for (let upperNoProxyItem of noProxy
+        .split(',')
+        .map(x => x.trim().toUpperCase())
+        .filter(x => x)) {
+        if (upperReqHosts.some(x => x === upperNoProxyItem)) {
+            return true;
+        }
+    }
+    return false;
+}
+exports.checkBypass = checkBypass;
+
+
+/***/ }),
+
+/***/ 9417:
 /***/ ((module) => {
 
 "use strict";
@@ -464,11 +2819,11 @@ function range(a, b, str) {
 
 /***/ }),
 
-/***/ 717:
+/***/ 3717:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-var concatMap = __nccwpck_require__(891);
-var balanced = __nccwpck_require__(417);
+var concatMap = __nccwpck_require__(6891);
+var balanced = __nccwpck_require__(9417);
 
 module.exports = expandTop;
 
@@ -672,7 +3027,7 @@ function expand(str, isTop) {
 
 /***/ }),
 
-/***/ 734:
+/***/ 6734:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -719,7 +3074,7 @@ const setLazyProperty = (object, property, get) => {
 let colorConvert;
 const makeDynamicStyles = (wrap, targetSpace, identity, isBackground) => {
 	if (colorConvert === undefined) {
-		colorConvert = __nccwpck_require__(121);
+		colorConvert = __nccwpck_require__(5121);
 	}
 
 	const offset = isBackground ? 10 : 0;
@@ -844,12 +3199,12 @@ Object.defineProperty(module, 'exports', {
 
 /***/ }),
 
-/***/ 159:
+/***/ 8159:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 /* MIT license */
 /* eslint-disable no-mixed-operators */
-const cssKeywords = __nccwpck_require__(57);
+const cssKeywords = __nccwpck_require__(4057);
 
 // NOTE: conversions should only return primitive values (i.e. arrays, or
 //       values that give correct `typeof` results).
@@ -1690,11 +4045,11 @@ convert.rgb.gray = function (rgb) {
 
 /***/ }),
 
-/***/ 121:
+/***/ 5121:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const conversions = __nccwpck_require__(159);
-const route = __nccwpck_require__(663);
+const conversions = __nccwpck_require__(8159);
+const route = __nccwpck_require__(4663);
 
 const convert = {};
 
@@ -1778,10 +4133,10 @@ module.exports = convert;
 
 /***/ }),
 
-/***/ 663:
+/***/ 4663:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const conversions = __nccwpck_require__(159);
+const conversions = __nccwpck_require__(8159);
 
 /*
 	This function routes a model to all other models.
@@ -1882,7 +4237,7 @@ module.exports = function (fromModel) {
 
 /***/ }),
 
-/***/ 57:
+/***/ 4057:
 /***/ ((module) => {
 
 "use strict";
@@ -2042,7 +4397,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 538:
+/***/ 1538:
 /***/ ((module) => {
 
 "use strict";
@@ -2058,14 +4413,14 @@ module.exports = (flag, argv = process.argv) => {
 
 /***/ }),
 
-/***/ 955:
+/***/ 4955:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const os = __nccwpck_require__(87);
-const tty = __nccwpck_require__(867);
-const hasFlag = __nccwpck_require__(538);
+const os = __nccwpck_require__(2087);
+const tty = __nccwpck_require__(3867);
+const hasFlag = __nccwpck_require__(1538);
 
 const {env} = process;
 
@@ -2201,17 +4556,17 @@ module.exports = {
 
 /***/ }),
 
-/***/ 818:
+/***/ 8818:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const ansiStyles = __nccwpck_require__(734);
-const {stdout: stdoutColor, stderr: stderrColor} = __nccwpck_require__(955);
+const ansiStyles = __nccwpck_require__(6734);
+const {stdout: stdoutColor, stderr: stderrColor} = __nccwpck_require__(4955);
 const {
 	stringReplaceAll,
 	stringEncaseCRLFWithFirstIndex
-} = __nccwpck_require__(415);
+} = __nccwpck_require__(2415);
 
 const {isArray} = Array;
 
@@ -2580,7 +4935,7 @@ module.exports = (chalk, temporary) => {
 
 /***/ }),
 
-/***/ 415:
+/***/ 2415:
 /***/ ((module) => {
 
 "use strict";
@@ -2627,7 +4982,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 891:
+/***/ 6891:
 /***/ ((module) => {
 
 module.exports = function (xs, fn) {
@@ -2647,7 +5002,7 @@ var isArray = Array.isArray || function (xs) {
 
 /***/ }),
 
-/***/ 863:
+/***/ 6863:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 module.exports = realpath
@@ -2657,13 +5012,13 @@ realpath.realpathSync = realpathSync
 realpath.monkeypatch = monkeypatch
 realpath.unmonkeypatch = unmonkeypatch
 
-var fs = __nccwpck_require__(747)
+var fs = __nccwpck_require__(5747)
 var origRealpath = fs.realpath
 var origRealpathSync = fs.realpathSync
 
 var version = process.version
 var ok = /^v[0-5]\./.test(version)
-var old = __nccwpck_require__(790)
+var old = __nccwpck_require__(1734)
 
 function newError (er) {
   return er && er.syscall === 'realpath' && (
@@ -2720,7 +5075,7 @@ function unmonkeypatch () {
 
 /***/ }),
 
-/***/ 790:
+/***/ 1734:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 // Copyright Joyent, Inc. and other Node contributors.
@@ -2744,9 +5099,9 @@ function unmonkeypatch () {
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-var pathModule = __nccwpck_require__(622);
+var pathModule = __nccwpck_require__(5622);
 var isWindows = process.platform === 'win32';
-var fs = __nccwpck_require__(747);
+var fs = __nccwpck_require__(5747);
 
 // JavaScript implementation of realpath, ported from node pre-v6
 
@@ -3030,7 +5385,7 @@ exports.realpath = function realpath(p, cache, cb) {
 
 /***/ }),
 
-/***/ 625:
+/***/ 7625:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 exports.alphasort = alphasort
@@ -3047,9 +5402,9 @@ function ownProp (obj, field) {
   return Object.prototype.hasOwnProperty.call(obj, field)
 }
 
-var path = __nccwpck_require__(622)
-var minimatch = __nccwpck_require__(973)
-var isAbsolute = __nccwpck_require__(714)
+var path = __nccwpck_require__(5622)
+var minimatch = __nccwpck_require__(3973)
+var isAbsolute = __nccwpck_require__(8714)
 var Minimatch = minimatch.Minimatch
 
 function alphasorti (a, b) {
@@ -3277,7 +5632,7 @@ function childrenIgnored (self, path) {
 
 /***/ }),
 
-/***/ 957:
+/***/ 1957:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // Approach:
@@ -3322,27 +5677,27 @@ function childrenIgnored (self, path) {
 
 module.exports = glob
 
-var fs = __nccwpck_require__(747)
-var rp = __nccwpck_require__(863)
-var minimatch = __nccwpck_require__(973)
+var fs = __nccwpck_require__(5747)
+var rp = __nccwpck_require__(6863)
+var minimatch = __nccwpck_require__(3973)
 var Minimatch = minimatch.Minimatch
-var inherits = __nccwpck_require__(124)
-var EE = __nccwpck_require__(614).EventEmitter
-var path = __nccwpck_require__(622)
-var assert = __nccwpck_require__(357)
-var isAbsolute = __nccwpck_require__(714)
-var globSync = __nccwpck_require__(10)
-var common = __nccwpck_require__(625)
+var inherits = __nccwpck_require__(4124)
+var EE = __nccwpck_require__(8614).EventEmitter
+var path = __nccwpck_require__(5622)
+var assert = __nccwpck_require__(2357)
+var isAbsolute = __nccwpck_require__(8714)
+var globSync = __nccwpck_require__(9010)
+var common = __nccwpck_require__(7625)
 var alphasort = common.alphasort
 var alphasorti = common.alphasorti
 var setopts = common.setopts
 var ownProp = common.ownProp
-var inflight = __nccwpck_require__(492)
-var util = __nccwpck_require__(669)
+var inflight = __nccwpck_require__(2492)
+var util = __nccwpck_require__(1669)
 var childrenIgnored = common.childrenIgnored
 var isIgnored = common.isIgnored
 
-var once = __nccwpck_require__(223)
+var once = __nccwpck_require__(1223)
 
 function glob (pattern, options, cb) {
   if (typeof options === 'function') cb = options, options = {}
@@ -4074,22 +6429,22 @@ Glob.prototype._stat2 = function (f, abs, er, stat, cb) {
 
 /***/ }),
 
-/***/ 10:
+/***/ 9010:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 module.exports = globSync
 globSync.GlobSync = GlobSync
 
-var fs = __nccwpck_require__(747)
-var rp = __nccwpck_require__(863)
-var minimatch = __nccwpck_require__(973)
+var fs = __nccwpck_require__(5747)
+var rp = __nccwpck_require__(6863)
+var minimatch = __nccwpck_require__(3973)
 var Minimatch = minimatch.Minimatch
-var Glob = __nccwpck_require__(957).Glob
-var util = __nccwpck_require__(669)
-var path = __nccwpck_require__(622)
-var assert = __nccwpck_require__(357)
-var isAbsolute = __nccwpck_require__(714)
-var common = __nccwpck_require__(625)
+var Glob = __nccwpck_require__(1957).Glob
+var util = __nccwpck_require__(1669)
+var path = __nccwpck_require__(5622)
+var assert = __nccwpck_require__(2357)
+var isAbsolute = __nccwpck_require__(8714)
+var common = __nccwpck_require__(7625)
 var alphasort = common.alphasort
 var alphasorti = common.alphasorti
 var setopts = common.setopts
@@ -4567,12 +6922,12 @@ GlobSync.prototype._makeAbs = function (f) {
 
 /***/ }),
 
-/***/ 492:
+/***/ 2492:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-var wrappy = __nccwpck_require__(940)
+var wrappy = __nccwpck_require__(2940)
 var reqs = Object.create(null)
-var once = __nccwpck_require__(223)
+var once = __nccwpck_require__(1223)
 
 module.exports = wrappy(inflight)
 
@@ -4628,23 +6983,23 @@ function slice (args) {
 
 /***/ }),
 
-/***/ 124:
+/***/ 4124:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 try {
-  var util = __nccwpck_require__(669);
+  var util = __nccwpck_require__(1669);
   /* istanbul ignore next */
   if (typeof util.inherits !== 'function') throw '';
   module.exports = util.inherits;
 } catch (e) {
   /* istanbul ignore next */
-  module.exports = __nccwpck_require__(544);
+  module.exports = __nccwpck_require__(8544);
 }
 
 
 /***/ }),
 
-/***/ 544:
+/***/ 8544:
 /***/ ((module) => {
 
 if (typeof Object.create === 'function') {
@@ -4678,7 +7033,7 @@ if (typeof Object.create === 'function') {
 
 /***/ }),
 
-/***/ 973:
+/***/ 3973:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 module.exports = minimatch
@@ -4686,11 +7041,11 @@ minimatch.Minimatch = Minimatch
 
 var path = { sep: '/' }
 try {
-  path = __nccwpck_require__(622)
+  path = __nccwpck_require__(5622)
 } catch (er) {}
 
 var GLOBSTAR = minimatch.GLOBSTAR = Minimatch.GLOBSTAR = {}
-var expand = __nccwpck_require__(717)
+var expand = __nccwpck_require__(3717)
 
 var plTypes = {
   '!': { open: '(?:(?!(?:', close: '))[^/]*?)'},
@@ -5608,10 +7963,10 @@ function regExpEscape (s) {
 
 /***/ }),
 
-/***/ 223:
+/***/ 1223:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-var wrappy = __nccwpck_require__(940)
+var wrappy = __nccwpck_require__(2940)
 module.exports = wrappy(once)
 module.exports.strict = wrappy(onceStrict)
 
@@ -5657,7 +8012,7 @@ function onceStrict (fn) {
 
 /***/ }),
 
-/***/ 714:
+/***/ 8714:
 /***/ ((module) => {
 
 "use strict";
@@ -5685,15 +8040,15 @@ module.exports.win32 = win32;
 
 /***/ }),
 
-/***/ 983:
+/***/ 5983:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = __nccwpck_require__(302);
+module.exports = __nccwpck_require__(8302);
 
 
 /***/ }),
 
-/***/ 280:
+/***/ 7280:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -5727,7 +8082,7 @@ module.exports = function getPathsAsync(patterns, config) {
 
 /***/ }),
 
-/***/ 379:
+/***/ 2379:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -5736,7 +8091,7 @@ module.exports = function getPathsAsync(patterns, config) {
 /**
  * Dependencies
  */
-const glob = __nccwpck_require__(957);
+const glob = __nccwpck_require__(1957);
 
 /**
  * Get paths (sync)
@@ -5786,7 +8141,7 @@ module.exports = function getPathsSync(patterns, config) {
 /**
  * Dependencies
  */
-const glob = __nccwpck_require__(957);
+const glob = __nccwpck_require__(1957);
 
 /**
  * Async wrapper for glob
@@ -5819,7 +8174,7 @@ module.exports = function globAsync(pattern, ignore, allowEmptyPaths, cfg) {
 
 /***/ }),
 
-/***/ 36:
+/***/ 4036:
 /***/ ((module) => {
 
 "use strict";
@@ -5902,7 +8257,7 @@ module.exports = function makeReplacements(contents, from, to, file, count) {
 
 /***/ }),
 
-/***/ 552:
+/***/ 6552:
 /***/ ((module) => {
 
 "use strict";
@@ -5977,7 +8332,7 @@ module.exports = function parseConfig(config) {
 
 /***/ }),
 
-/***/ 149:
+/***/ 9149:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -5986,8 +8341,8 @@ module.exports = function parseConfig(config) {
 /**
  * Dependencies
  */
-const fs = __nccwpck_require__(747);
-const makeReplacements = __nccwpck_require__(36);
+const fs = __nccwpck_require__(5747);
+const makeReplacements = __nccwpck_require__(4036);
 
 /**
  * Helper to replace in a single file (async)
@@ -6030,7 +8385,7 @@ module.exports = function replaceAsync(file, from, to, config) {
 
 /***/ }),
 
-/***/ 884:
+/***/ 5884:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -6039,8 +8394,8 @@ module.exports = function replaceAsync(file, from, to, config) {
 /**
  * Dependencies
  */
-const fs = __nccwpck_require__(747);
-const makeReplacements = __nccwpck_require__(36);
+const fs = __nccwpck_require__(5747);
+const makeReplacements = __nccwpck_require__(4036);
 
 /**
  * Helper to replace in a single file (sync)
@@ -6068,7 +8423,7 @@ module.exports = function replaceSync(file, from, to, config) {
 
 /***/ }),
 
-/***/ 302:
+/***/ 8302:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -6077,12 +8432,12 @@ module.exports = function replaceSync(file, from, to, config) {
 /**
  * Dependencies
  */
-const chalk = __nccwpck_require__(818);
-const parseConfig = __nccwpck_require__(552);
-const getPathsSync = __nccwpck_require__(379);
-const getPathsAsync = __nccwpck_require__(280);
-const replaceSync = __nccwpck_require__(884);
-const replaceAsync = __nccwpck_require__(149);
+const chalk = __nccwpck_require__(8818);
+const parseConfig = __nccwpck_require__(6552);
+const getPathsSync = __nccwpck_require__(2379);
+const getPathsAsync = __nccwpck_require__(7280);
+const replaceSync = __nccwpck_require__(5884);
+const replaceAsync = __nccwpck_require__(9149);
 
 /**
  * Replace in file helper
@@ -6169,7 +8524,1490 @@ module.exports = replaceInFile;
 
 /***/ }),
 
-/***/ 940:
+/***/ 8065:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const {promisify} = __nccwpck_require__(1669);
+const tmp = __nccwpck_require__(8517);
+
+// file
+module.exports.fileSync = tmp.fileSync;
+const fileWithOptions = promisify((options, cb) =>
+  tmp.file(options, (err, path, fd, cleanup) =>
+    err ? cb(err) : cb(undefined, { path, fd, cleanup: promisify(cleanup) })
+  )
+);
+module.exports.file = async (options) => fileWithOptions(options);
+
+module.exports.withFile = async function withFile(fn, options) {
+  const { path, fd, cleanup } = await module.exports.file(options);
+  try {
+    return await fn({ path, fd });
+  } finally {
+    await cleanup();
+  }
+};
+
+
+// directory
+module.exports.dirSync = tmp.dirSync;
+const dirWithOptions = promisify((options, cb) =>
+  tmp.dir(options, (err, path, cleanup) =>
+    err ? cb(err) : cb(undefined, { path, cleanup: promisify(cleanup) })
+  )
+);
+module.exports.dir = async (options) => dirWithOptions(options);
+
+module.exports.withDir = async function withDir(fn, options) {
+  const { path, cleanup } = await module.exports.dir(options);
+  try {
+    return await fn({ path });
+  } finally {
+    await cleanup();
+  }
+};
+
+
+// name generation
+module.exports.tmpNameSync = tmp.tmpNameSync;
+module.exports.tmpName = promisify(tmp.tmpName);
+
+module.exports.tmpdir = tmp.tmpdir;
+
+module.exports.setGracefulCleanup = tmp.setGracefulCleanup;
+
+
+/***/ }),
+
+/***/ 8517:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/*!
+ * Tmp
+ *
+ * Copyright (c) 2011-2017 KARASZI Istvan <github@spam.raszi.hu>
+ *
+ * MIT Licensed
+ */
+
+/*
+ * Module dependencies.
+ */
+const fs = __nccwpck_require__(5747);
+const os = __nccwpck_require__(2087);
+const path = __nccwpck_require__(5622);
+const crypto = __nccwpck_require__(6417);
+const _c = fs.constants && os.constants ?
+  { fs: fs.constants, os: os.constants } :
+  process.binding('constants');
+const rimraf = __nccwpck_require__(2371);
+
+/*
+ * The working inner variables.
+ */
+const
+  // the random characters to choose from
+  RANDOM_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+
+  TEMPLATE_PATTERN = /XXXXXX/,
+
+  DEFAULT_TRIES = 3,
+
+  CREATE_FLAGS = (_c.O_CREAT || _c.fs.O_CREAT) | (_c.O_EXCL || _c.fs.O_EXCL) | (_c.O_RDWR || _c.fs.O_RDWR),
+
+  EBADF = _c.EBADF || _c.os.errno.EBADF,
+  ENOENT = _c.ENOENT || _c.os.errno.ENOENT,
+
+  DIR_MODE = 448 /* 0o700 */,
+  FILE_MODE = 384 /* 0o600 */,
+
+  EXIT = 'exit',
+
+  SIGINT = 'SIGINT',
+
+  // this will hold the objects need to be removed on exit
+  _removeObjects = [];
+
+var
+  _gracefulCleanup = false;
+
+/**
+ * Random name generator based on crypto.
+ * Adapted from http://blog.tompawlak.org/how-to-generate-random-values-nodejs-javascript
+ *
+ * @param {number} howMany
+ * @returns {string} the generated random name
+ * @private
+ */
+function _randomChars(howMany) {
+  var
+    value = [],
+    rnd = null;
+
+  // make sure that we do not fail because we ran out of entropy
+  try {
+    rnd = crypto.randomBytes(howMany);
+  } catch (e) {
+    rnd = crypto.pseudoRandomBytes(howMany);
+  }
+
+  for (var i = 0; i < howMany; i++) {
+    value.push(RANDOM_CHARS[rnd[i] % RANDOM_CHARS.length]);
+  }
+
+  return value.join('');
+}
+
+/**
+ * Checks whether the `obj` parameter is defined or not.
+ *
+ * @param {Object} obj
+ * @returns {boolean} true if the object is undefined
+ * @private
+ */
+function _isUndefined(obj) {
+  return typeof obj === 'undefined';
+}
+
+/**
+ * Parses the function arguments.
+ *
+ * This function helps to have optional arguments.
+ *
+ * @param {(Options|Function)} options
+ * @param {Function} callback
+ * @returns {Array} parsed arguments
+ * @private
+ */
+function _parseArguments(options, callback) {
+  /* istanbul ignore else */
+  if (typeof options === 'function') {
+    return [{}, options];
+  }
+
+  /* istanbul ignore else */
+  if (_isUndefined(options)) {
+    return [{}, callback];
+  }
+
+  return [options, callback];
+}
+
+/**
+ * Generates a new temporary name.
+ *
+ * @param {Object} opts
+ * @returns {string} the new random name according to opts
+ * @private
+ */
+function _generateTmpName(opts) {
+
+  const tmpDir = _getTmpDir();
+
+  // fail early on missing tmp dir
+  if (isBlank(opts.dir) && isBlank(tmpDir)) {
+    throw new Error('No tmp dir specified');
+  }
+
+  /* istanbul ignore else */
+  if (!isBlank(opts.name)) {
+    return path.join(opts.dir || tmpDir, opts.name);
+  }
+
+  // mkstemps like template
+  // opts.template has already been guarded in tmpName() below
+  /* istanbul ignore else */
+  if (opts.template) {
+    var template = opts.template;
+    // make sure that we prepend the tmp path if none was given
+    /* istanbul ignore else */
+    if (path.basename(template) === template)
+      template = path.join(opts.dir || tmpDir, template);
+    return template.replace(TEMPLATE_PATTERN, _randomChars(6));
+  }
+
+  // prefix and postfix
+  const name = [
+    (isBlank(opts.prefix) ? 'tmp-' : opts.prefix),
+    process.pid,
+    _randomChars(12),
+    (opts.postfix ? opts.postfix : '')
+  ].join('');
+
+  return path.join(opts.dir || tmpDir, name);
+}
+
+/**
+ * Gets a temporary file name.
+ *
+ * @param {(Options|tmpNameCallback)} options options or callback
+ * @param {?tmpNameCallback} callback the callback function
+ */
+function tmpName(options, callback) {
+  var
+    args = _parseArguments(options, callback),
+    opts = args[0],
+    cb = args[1],
+    tries = !isBlank(opts.name) ? 1 : opts.tries || DEFAULT_TRIES;
+
+  /* istanbul ignore else */
+  if (isNaN(tries) || tries < 0)
+    return cb(new Error('Invalid tries'));
+
+  /* istanbul ignore else */
+  if (opts.template && !opts.template.match(TEMPLATE_PATTERN))
+    return cb(new Error('Invalid template provided'));
+
+  (function _getUniqueName() {
+    try {
+      const name = _generateTmpName(opts);
+
+      // check whether the path exists then retry if needed
+      fs.stat(name, function (err) {
+        /* istanbul ignore else */
+        if (!err) {
+          /* istanbul ignore else */
+          if (tries-- > 0) return _getUniqueName();
+
+          return cb(new Error('Could not get a unique tmp filename, max tries reached ' + name));
+        }
+
+        cb(null, name);
+      });
+    } catch (err) {
+      cb(err);
+    }
+  }());
+}
+
+/**
+ * Synchronous version of tmpName.
+ *
+ * @param {Object} options
+ * @returns {string} the generated random name
+ * @throws {Error} if the options are invalid or could not generate a filename
+ */
+function tmpNameSync(options) {
+  var
+    args = _parseArguments(options),
+    opts = args[0],
+    tries = !isBlank(opts.name) ? 1 : opts.tries || DEFAULT_TRIES;
+
+  /* istanbul ignore else */
+  if (isNaN(tries) || tries < 0)
+    throw new Error('Invalid tries');
+
+  /* istanbul ignore else */
+  if (opts.template && !opts.template.match(TEMPLATE_PATTERN))
+    throw new Error('Invalid template provided');
+
+  do {
+    const name = _generateTmpName(opts);
+    try {
+      fs.statSync(name);
+    } catch (e) {
+      return name;
+    }
+  } while (tries-- > 0);
+
+  throw new Error('Could not get a unique tmp filename, max tries reached');
+}
+
+/**
+ * Creates and opens a temporary file.
+ *
+ * @param {(Options|fileCallback)} options the config options or the callback function
+ * @param {?fileCallback} callback
+ */
+function file(options, callback) {
+  var
+    args = _parseArguments(options, callback),
+    opts = args[0],
+    cb = args[1];
+
+  // gets a temporary filename
+  tmpName(opts, function _tmpNameCreated(err, name) {
+    /* istanbul ignore else */
+    if (err) return cb(err);
+
+    // create and open the file
+    fs.open(name, CREATE_FLAGS, opts.mode || FILE_MODE, function _fileCreated(err, fd) {
+      /* istanbul ignore else */
+      if (err) return cb(err);
+
+      if (opts.discardDescriptor) {
+        return fs.close(fd, function _discardCallback(err) {
+          /* istanbul ignore else */
+          if (err) {
+            // Low probability, and the file exists, so this could be
+            // ignored.  If it isn't we certainly need to unlink the
+            // file, and if that fails too its error is more
+            // important.
+            try {
+              fs.unlinkSync(name);
+            } catch (e) {
+              if (!isENOENT(e)) {
+                err = e;
+              }
+            }
+            return cb(err);
+          }
+          cb(null, name, undefined, _prepareTmpFileRemoveCallback(name, -1, opts));
+        });
+      }
+      /* istanbul ignore else */
+      if (opts.detachDescriptor) {
+        return cb(null, name, fd, _prepareTmpFileRemoveCallback(name, -1, opts));
+      }
+      cb(null, name, fd, _prepareTmpFileRemoveCallback(name, fd, opts));
+    });
+  });
+}
+
+/**
+ * Synchronous version of file.
+ *
+ * @param {Options} options
+ * @returns {FileSyncObject} object consists of name, fd and removeCallback
+ * @throws {Error} if cannot create a file
+ */
+function fileSync(options) {
+  var
+    args = _parseArguments(options),
+    opts = args[0];
+
+  const discardOrDetachDescriptor = opts.discardDescriptor || opts.detachDescriptor;
+  const name = tmpNameSync(opts);
+  var fd = fs.openSync(name, CREATE_FLAGS, opts.mode || FILE_MODE);
+  /* istanbul ignore else */
+  if (opts.discardDescriptor) {
+    fs.closeSync(fd);
+    fd = undefined;
+  }
+
+  return {
+    name: name,
+    fd: fd,
+    removeCallback: _prepareTmpFileRemoveCallback(name, discardOrDetachDescriptor ? -1 : fd, opts)
+  };
+}
+
+/**
+ * Creates a temporary directory.
+ *
+ * @param {(Options|dirCallback)} options the options or the callback function
+ * @param {?dirCallback} callback
+ */
+function dir(options, callback) {
+  var
+    args = _parseArguments(options, callback),
+    opts = args[0],
+    cb = args[1];
+
+  // gets a temporary filename
+  tmpName(opts, function _tmpNameCreated(err, name) {
+    /* istanbul ignore else */
+    if (err) return cb(err);
+
+    // create the directory
+    fs.mkdir(name, opts.mode || DIR_MODE, function _dirCreated(err) {
+      /* istanbul ignore else */
+      if (err) return cb(err);
+
+      cb(null, name, _prepareTmpDirRemoveCallback(name, opts));
+    });
+  });
+}
+
+/**
+ * Synchronous version of dir.
+ *
+ * @param {Options} options
+ * @returns {DirSyncObject} object consists of name and removeCallback
+ * @throws {Error} if it cannot create a directory
+ */
+function dirSync(options) {
+  var
+    args = _parseArguments(options),
+    opts = args[0];
+
+  const name = tmpNameSync(opts);
+  fs.mkdirSync(name, opts.mode || DIR_MODE);
+
+  return {
+    name: name,
+    removeCallback: _prepareTmpDirRemoveCallback(name, opts)
+  };
+}
+
+/**
+ * Removes files asynchronously.
+ *
+ * @param {Object} fdPath
+ * @param {Function} next
+ * @private
+ */
+function _removeFileAsync(fdPath, next) {
+  const _handler = function (err) {
+    if (err && !isENOENT(err)) {
+      // reraise any unanticipated error
+      return next(err);
+    }
+    next();
+  }
+
+  if (0 <= fdPath[0])
+    fs.close(fdPath[0], function (err) {
+      fs.unlink(fdPath[1], _handler);
+    });
+  else fs.unlink(fdPath[1], _handler);
+}
+
+/**
+ * Removes files synchronously.
+ *
+ * @param {Object} fdPath
+ * @private
+ */
+function _removeFileSync(fdPath) {
+  try {
+    if (0 <= fdPath[0]) fs.closeSync(fdPath[0]);
+  } catch (e) {
+    // reraise any unanticipated error
+    if (!isEBADF(e) && !isENOENT(e)) throw e;
+  } finally {
+    try {
+      fs.unlinkSync(fdPath[1]);
+    }
+    catch (e) {
+      // reraise any unanticipated error
+      if (!isENOENT(e)) throw e;
+    }
+  }
+}
+
+/**
+ * Prepares the callback for removal of the temporary file.
+ *
+ * @param {string} name the path of the file
+ * @param {number} fd file descriptor
+ * @param {Object} opts
+ * @returns {fileCallback}
+ * @private
+ */
+function _prepareTmpFileRemoveCallback(name, fd, opts) {
+  const removeCallbackSync = _prepareRemoveCallback(_removeFileSync, [fd, name]);
+  const removeCallback = _prepareRemoveCallback(_removeFileAsync, [fd, name], removeCallbackSync);
+
+  if (!opts.keep) _removeObjects.unshift(removeCallbackSync);
+
+  return removeCallback;
+}
+
+/**
+ * Simple wrapper for rimraf.
+ *
+ * @param {string} dirPath
+ * @param {Function} next
+ * @private
+ */
+function _rimrafRemoveDirWrapper(dirPath, next) {
+  rimraf(dirPath, next);
+}
+
+/**
+ * Simple wrapper for rimraf.sync.
+ *
+ * @param {string} dirPath
+ * @private
+ */
+function _rimrafRemoveDirSyncWrapper(dirPath, next) {
+  try {
+    return next(null, rimraf.sync(dirPath));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+/**
+ * Prepares the callback for removal of the temporary directory.
+ *
+ * @param {string} name
+ * @param {Object} opts
+ * @returns {Function} the callback
+ * @private
+ */
+function _prepareTmpDirRemoveCallback(name, opts) {
+  const removeFunction = opts.unsafeCleanup ? _rimrafRemoveDirWrapper : fs.rmdir.bind(fs);
+  const removeFunctionSync = opts.unsafeCleanup ? _rimrafRemoveDirSyncWrapper : fs.rmdirSync.bind(fs);
+  const removeCallbackSync = _prepareRemoveCallback(removeFunctionSync, name);
+  const removeCallback = _prepareRemoveCallback(removeFunction, name, removeCallbackSync);
+  if (!opts.keep) _removeObjects.unshift(removeCallbackSync);
+
+  return removeCallback;
+}
+
+/**
+ * Creates a guarded function wrapping the removeFunction call.
+ *
+ * @param {Function} removeFunction
+ * @param {Object} arg
+ * @returns {Function}
+ * @private
+ */
+function _prepareRemoveCallback(removeFunction, arg, cleanupCallbackSync) {
+  var called = false;
+
+  return function _cleanupCallback(next) {
+    next = next || function () {};
+    if (!called) {
+      const toRemove = cleanupCallbackSync || _cleanupCallback;
+      const index = _removeObjects.indexOf(toRemove);
+      /* istanbul ignore else */
+      if (index >= 0) _removeObjects.splice(index, 1);
+
+      called = true;
+      // sync?
+      if (removeFunction.length === 1) {
+        try {
+          removeFunction(arg);
+          return next(null);
+        }
+        catch (err) {
+          // if no next is provided and since we are
+          // in silent cleanup mode on process exit,
+          // we will ignore the error
+          return next(err);
+        }
+      } else return removeFunction(arg, next);
+    } else return next(new Error('cleanup callback has already been called'));
+  };
+}
+
+/**
+ * The garbage collector.
+ *
+ * @private
+ */
+function _garbageCollector() {
+  /* istanbul ignore else */
+  if (!_gracefulCleanup) return;
+
+  // the function being called removes itself from _removeObjects,
+  // loop until _removeObjects is empty
+  while (_removeObjects.length) {
+    try {
+      _removeObjects[0]();
+    } catch (e) {
+      // already removed?
+    }
+  }
+}
+
+/**
+ * Helper for testing against EBADF to compensate changes made to Node 7.x under Windows.
+ */
+function isEBADF(error) {
+  return isExpectedError(error, -EBADF, 'EBADF');
+}
+
+/**
+ * Helper for testing against ENOENT to compensate changes made to Node 7.x under Windows.
+ */
+function isENOENT(error) {
+  return isExpectedError(error, -ENOENT, 'ENOENT');
+}
+
+/**
+ * Helper to determine whether the expected error code matches the actual code and errno,
+ * which will differ between the supported node versions.
+ *
+ * - Node >= 7.0:
+ *   error.code {string}
+ *   error.errno {string|number} any numerical value will be negated
+ *
+ * - Node >= 6.0 < 7.0:
+ *   error.code {string}
+ *   error.errno {number} negated
+ *
+ * - Node >= 4.0 < 6.0: introduces SystemError
+ *   error.code {string}
+ *   error.errno {number} negated
+ *
+ * - Node >= 0.10 < 4.0:
+ *   error.code {number} negated
+ *   error.errno n/a
+ */
+function isExpectedError(error, code, errno) {
+  return error.code === code || error.code === errno;
+}
+
+/**
+ * Helper which determines whether a string s is blank, that is undefined, or empty or null.
+ *
+ * @private
+ * @param {string} s
+ * @returns {Boolean} true whether the string s is blank, false otherwise
+ */
+function isBlank(s) {
+  return s === null || s === undefined || !s.trim();
+}
+
+/**
+ * Sets the graceful cleanup.
+ */
+function setGracefulCleanup() {
+  _gracefulCleanup = true;
+}
+
+/**
+ * Returns the currently configured tmp dir from os.tmpdir().
+ *
+ * @private
+ * @returns {string} the currently configured tmp dir
+ */
+function _getTmpDir() {
+  return os.tmpdir();
+}
+
+/**
+ * If there are multiple different versions of tmp in place, make sure that
+ * we recognize the old listeners.
+ *
+ * @param {Function} listener
+ * @private
+ * @returns {Boolean} true whether listener is a legacy listener
+ */
+function _is_legacy_listener(listener) {
+  return (listener.name === '_exit' || listener.name === '_uncaughtExceptionThrown')
+    && listener.toString().indexOf('_garbageCollector();') > -1;
+}
+
+/**
+ * Safely install SIGINT listener.
+ *
+ * NOTE: this will only work on OSX and Linux.
+ *
+ * @private
+ */
+function _safely_install_sigint_listener() {
+
+  const listeners = process.listeners(SIGINT);
+  const existingListeners = [];
+  for (let i = 0, length = listeners.length; i < length; i++) {
+    const lstnr = listeners[i];
+    /* istanbul ignore else */
+    if (lstnr.name === '_tmp$sigint_listener') {
+      existingListeners.push(lstnr);
+      process.removeListener(SIGINT, lstnr);
+    }
+  }
+  process.on(SIGINT, function _tmp$sigint_listener(doExit) {
+    for (let i = 0, length = existingListeners.length; i < length; i++) {
+      // let the existing listener do the garbage collection (e.g. jest sandbox)
+      try {
+        existingListeners[i](false);
+      } catch (err) {
+        // ignore
+      }
+    }
+    try {
+      // force the garbage collector even it is called again in the exit listener
+      _garbageCollector();
+    } finally {
+      if (!!doExit) {
+        process.exit(0);
+      }
+    }
+  });
+}
+
+/**
+ * Safely install process exit listener.
+ *
+ * @private
+ */
+function _safely_install_exit_listener() {
+  const listeners = process.listeners(EXIT);
+
+  // collect any existing listeners
+  const existingListeners = [];
+  for (let i = 0, length = listeners.length; i < length; i++) {
+    const lstnr = listeners[i];
+    /* istanbul ignore else */
+    // TODO: remove support for legacy listeners once release 1.0.0 is out
+    if (lstnr.name === '_tmp$safe_listener' || _is_legacy_listener(lstnr)) {
+      // we must forget about the uncaughtException listener, hopefully it is ours
+      if (lstnr.name !== '_uncaughtExceptionThrown') {
+        existingListeners.push(lstnr);
+      }
+      process.removeListener(EXIT, lstnr);
+    }
+  }
+  // TODO: what was the data parameter good for?
+  process.addListener(EXIT, function _tmp$safe_listener(data) {
+    for (let i = 0, length = existingListeners.length; i < length; i++) {
+      // let the existing listener do the garbage collection (e.g. jest sandbox)
+      try {
+        existingListeners[i](data);
+      } catch (err) {
+        // ignore
+      }
+    }
+    _garbageCollector();
+  });
+}
+
+_safely_install_exit_listener();
+_safely_install_sigint_listener();
+
+/**
+ * Configuration options.
+ *
+ * @typedef {Object} Options
+ * @property {?number} tries the number of tries before give up the name generation
+ * @property {?string} template the "mkstemp" like filename template
+ * @property {?string} name fix name
+ * @property {?string} dir the tmp directory to use
+ * @property {?string} prefix prefix for the generated name
+ * @property {?string} postfix postfix for the generated name
+ * @property {?boolean} unsafeCleanup recursively removes the created temporary directory, even when it's not empty
+ */
+
+/**
+ * @typedef {Object} FileSyncObject
+ * @property {string} name the name of the file
+ * @property {string} fd the file descriptor
+ * @property {fileCallback} removeCallback the callback function to remove the file
+ */
+
+/**
+ * @typedef {Object} DirSyncObject
+ * @property {string} name the name of the directory
+ * @property {fileCallback} removeCallback the callback function to remove the directory
+ */
+
+/**
+ * @callback tmpNameCallback
+ * @param {?Error} err the error object if anything goes wrong
+ * @param {string} name the temporary file name
+ */
+
+/**
+ * @callback fileCallback
+ * @param {?Error} err the error object if anything goes wrong
+ * @param {string} name the temporary file name
+ * @param {number} fd the file descriptor
+ * @param {cleanupCallback} fn the cleanup callback function
+ */
+
+/**
+ * @callback dirCallback
+ * @param {?Error} err the error object if anything goes wrong
+ * @param {string} name the temporary file name
+ * @param {cleanupCallback} fn the cleanup callback function
+ */
+
+/**
+ * Removes the temporary created file or directory.
+ *
+ * @callback cleanupCallback
+ * @param {simpleCallback} [next] function to call after entry was removed
+ */
+
+/**
+ * Callback function for function composition.
+ * @see {@link https://github.com/raszi/node-tmp/issues/57|raszi/node-tmp#57}
+ *
+ * @callback simpleCallback
+ */
+
+// exporting all the needed methods
+
+// evaluate os.tmpdir() lazily, mainly for simplifying testing but it also will
+// allow users to reconfigure the temporary directory
+Object.defineProperty(module.exports, "tmpdir", ({
+  enumerable: true,
+  configurable: false,
+  get: function () {
+    return _getTmpDir();
+  }
+}));
+
+module.exports.dir = dir;
+module.exports.dirSync = dirSync;
+
+module.exports.file = file;
+module.exports.fileSync = fileSync;
+
+module.exports.tmpName = tmpName;
+module.exports.tmpNameSync = tmpNameSync;
+
+module.exports.setGracefulCleanup = setGracefulCleanup;
+
+
+/***/ }),
+
+/***/ 2371:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+module.exports = rimraf
+rimraf.sync = rimrafSync
+
+var assert = __nccwpck_require__(2357)
+var path = __nccwpck_require__(5622)
+var fs = __nccwpck_require__(5747)
+var glob = undefined
+try {
+  glob = __nccwpck_require__(1957)
+} catch (_err) {
+  // treat glob as optional.
+}
+var _0666 = parseInt('666', 8)
+
+var defaultGlobOpts = {
+  nosort: true,
+  silent: true
+}
+
+// for EMFILE handling
+var timeout = 0
+
+var isWindows = (process.platform === "win32")
+
+function defaults (options) {
+  var methods = [
+    'unlink',
+    'chmod',
+    'stat',
+    'lstat',
+    'rmdir',
+    'readdir'
+  ]
+  methods.forEach(function(m) {
+    options[m] = options[m] || fs[m]
+    m = m + 'Sync'
+    options[m] = options[m] || fs[m]
+  })
+
+  options.maxBusyTries = options.maxBusyTries || 3
+  options.emfileWait = options.emfileWait || 1000
+  if (options.glob === false) {
+    options.disableGlob = true
+  }
+  if (options.disableGlob !== true && glob === undefined) {
+    throw Error('glob dependency not found, set `options.disableGlob = true` if intentional')
+  }
+  options.disableGlob = options.disableGlob || false
+  options.glob = options.glob || defaultGlobOpts
+}
+
+function rimraf (p, options, cb) {
+  if (typeof options === 'function') {
+    cb = options
+    options = {}
+  }
+
+  assert(p, 'rimraf: missing path')
+  assert.equal(typeof p, 'string', 'rimraf: path should be a string')
+  assert.equal(typeof cb, 'function', 'rimraf: callback function required')
+  assert(options, 'rimraf: invalid options argument provided')
+  assert.equal(typeof options, 'object', 'rimraf: options should be object')
+
+  defaults(options)
+
+  var busyTries = 0
+  var errState = null
+  var n = 0
+
+  if (options.disableGlob || !glob.hasMagic(p))
+    return afterGlob(null, [p])
+
+  options.lstat(p, function (er, stat) {
+    if (!er)
+      return afterGlob(null, [p])
+
+    glob(p, options.glob, afterGlob)
+  })
+
+  function next (er) {
+    errState = errState || er
+    if (--n === 0)
+      cb(errState)
+  }
+
+  function afterGlob (er, results) {
+    if (er)
+      return cb(er)
+
+    n = results.length
+    if (n === 0)
+      return cb()
+
+    results.forEach(function (p) {
+      rimraf_(p, options, function CB (er) {
+        if (er) {
+          if ((er.code === "EBUSY" || er.code === "ENOTEMPTY" || er.code === "EPERM") &&
+              busyTries < options.maxBusyTries) {
+            busyTries ++
+            var time = busyTries * 100
+            // try again, with the same exact callback as this one.
+            return setTimeout(function () {
+              rimraf_(p, options, CB)
+            }, time)
+          }
+
+          // this one won't happen if graceful-fs is used.
+          if (er.code === "EMFILE" && timeout < options.emfileWait) {
+            return setTimeout(function () {
+              rimraf_(p, options, CB)
+            }, timeout ++)
+          }
+
+          // already gone
+          if (er.code === "ENOENT") er = null
+        }
+
+        timeout = 0
+        next(er)
+      })
+    })
+  }
+}
+
+// Two possible strategies.
+// 1. Assume it's a file.  unlink it, then do the dir stuff on EPERM or EISDIR
+// 2. Assume it's a directory.  readdir, then do the file stuff on ENOTDIR
+//
+// Both result in an extra syscall when you guess wrong.  However, there
+// are likely far more normal files in the world than directories.  This
+// is based on the assumption that a the average number of files per
+// directory is >= 1.
+//
+// If anyone ever complains about this, then I guess the strategy could
+// be made configurable somehow.  But until then, YAGNI.
+function rimraf_ (p, options, cb) {
+  assert(p)
+  assert(options)
+  assert(typeof cb === 'function')
+
+  // sunos lets the root user unlink directories, which is... weird.
+  // so we have to lstat here and make sure it's not a dir.
+  options.lstat(p, function (er, st) {
+    if (er && er.code === "ENOENT")
+      return cb(null)
+
+    // Windows can EPERM on stat.  Life is suffering.
+    if (er && er.code === "EPERM" && isWindows)
+      fixWinEPERM(p, options, er, cb)
+
+    if (st && st.isDirectory())
+      return rmdir(p, options, er, cb)
+
+    options.unlink(p, function (er) {
+      if (er) {
+        if (er.code === "ENOENT")
+          return cb(null)
+        if (er.code === "EPERM")
+          return (isWindows)
+            ? fixWinEPERM(p, options, er, cb)
+            : rmdir(p, options, er, cb)
+        if (er.code === "EISDIR")
+          return rmdir(p, options, er, cb)
+      }
+      return cb(er)
+    })
+  })
+}
+
+function fixWinEPERM (p, options, er, cb) {
+  assert(p)
+  assert(options)
+  assert(typeof cb === 'function')
+  if (er)
+    assert(er instanceof Error)
+
+  options.chmod(p, _0666, function (er2) {
+    if (er2)
+      cb(er2.code === "ENOENT" ? null : er)
+    else
+      options.stat(p, function(er3, stats) {
+        if (er3)
+          cb(er3.code === "ENOENT" ? null : er)
+        else if (stats.isDirectory())
+          rmdir(p, options, er, cb)
+        else
+          options.unlink(p, cb)
+      })
+  })
+}
+
+function fixWinEPERMSync (p, options, er) {
+  assert(p)
+  assert(options)
+  if (er)
+    assert(er instanceof Error)
+
+  try {
+    options.chmodSync(p, _0666)
+  } catch (er2) {
+    if (er2.code === "ENOENT")
+      return
+    else
+      throw er
+  }
+
+  try {
+    var stats = options.statSync(p)
+  } catch (er3) {
+    if (er3.code === "ENOENT")
+      return
+    else
+      throw er
+  }
+
+  if (stats.isDirectory())
+    rmdirSync(p, options, er)
+  else
+    options.unlinkSync(p)
+}
+
+function rmdir (p, options, originalEr, cb) {
+  assert(p)
+  assert(options)
+  if (originalEr)
+    assert(originalEr instanceof Error)
+  assert(typeof cb === 'function')
+
+  // try to rmdir first, and only readdir on ENOTEMPTY or EEXIST (SunOS)
+  // if we guessed wrong, and it's not a directory, then
+  // raise the original error.
+  options.rmdir(p, function (er) {
+    if (er && (er.code === "ENOTEMPTY" || er.code === "EEXIST" || er.code === "EPERM"))
+      rmkids(p, options, cb)
+    else if (er && er.code === "ENOTDIR")
+      cb(originalEr)
+    else
+      cb(er)
+  })
+}
+
+function rmkids(p, options, cb) {
+  assert(p)
+  assert(options)
+  assert(typeof cb === 'function')
+
+  options.readdir(p, function (er, files) {
+    if (er)
+      return cb(er)
+    var n = files.length
+    if (n === 0)
+      return options.rmdir(p, cb)
+    var errState
+    files.forEach(function (f) {
+      rimraf(path.join(p, f), options, function (er) {
+        if (errState)
+          return
+        if (er)
+          return cb(errState = er)
+        if (--n === 0)
+          options.rmdir(p, cb)
+      })
+    })
+  })
+}
+
+// this looks simpler, and is strictly *faster*, but will
+// tie up the JavaScript thread and fail on excessively
+// deep directory trees.
+function rimrafSync (p, options) {
+  options = options || {}
+  defaults(options)
+
+  assert(p, 'rimraf: missing path')
+  assert.equal(typeof p, 'string', 'rimraf: path should be a string')
+  assert(options, 'rimraf: missing options')
+  assert.equal(typeof options, 'object', 'rimraf: options should be object')
+
+  var results
+
+  if (options.disableGlob || !glob.hasMagic(p)) {
+    results = [p]
+  } else {
+    try {
+      options.lstatSync(p)
+      results = [p]
+    } catch (er) {
+      results = glob.sync(p, options.glob)
+    }
+  }
+
+  if (!results.length)
+    return
+
+  for (var i = 0; i < results.length; i++) {
+    var p = results[i]
+
+    try {
+      var st = options.lstatSync(p)
+    } catch (er) {
+      if (er.code === "ENOENT")
+        return
+
+      // Windows can EPERM on stat.  Life is suffering.
+      if (er.code === "EPERM" && isWindows)
+        fixWinEPERMSync(p, options, er)
+    }
+
+    try {
+      // sunos lets the root user unlink directories, which is... weird.
+      if (st && st.isDirectory())
+        rmdirSync(p, options, null)
+      else
+        options.unlinkSync(p)
+    } catch (er) {
+      if (er.code === "ENOENT")
+        return
+      if (er.code === "EPERM")
+        return isWindows ? fixWinEPERMSync(p, options, er) : rmdirSync(p, options, er)
+      if (er.code !== "EISDIR")
+        throw er
+
+      rmdirSync(p, options, er)
+    }
+  }
+}
+
+function rmdirSync (p, options, originalEr) {
+  assert(p)
+  assert(options)
+  if (originalEr)
+    assert(originalEr instanceof Error)
+
+  try {
+    options.rmdirSync(p)
+  } catch (er) {
+    if (er.code === "ENOENT")
+      return
+    if (er.code === "ENOTDIR")
+      throw originalEr
+    if (er.code === "ENOTEMPTY" || er.code === "EEXIST" || er.code === "EPERM")
+      rmkidsSync(p, options)
+  }
+}
+
+function rmkidsSync (p, options) {
+  assert(p)
+  assert(options)
+  options.readdirSync(p).forEach(function (f) {
+    rimrafSync(path.join(p, f), options)
+  })
+
+  // We only end up here once we got ENOTEMPTY at least once, and
+  // at this point, we are guaranteed to have removed all the kids.
+  // So, we know that it won't be ENOENT or ENOTDIR or anything else.
+  // try really hard to delete stuff on windows, because it has a
+  // PROFOUNDLY annoying habit of not closing handles promptly when
+  // files are deleted, resulting in spurious ENOTEMPTY errors.
+  var retries = isWindows ? 100 : 1
+  var i = 0
+  do {
+    var threw = true
+    try {
+      var ret = options.rmdirSync(p, options)
+      threw = false
+      return ret
+    } finally {
+      if (++i < retries && threw)
+        continue
+    }
+  } while (true)
+}
+
+
+/***/ }),
+
+/***/ 4294:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+module.exports = __nccwpck_require__(4219);
+
+
+/***/ }),
+
+/***/ 4219:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+var net = __nccwpck_require__(1631);
+var tls = __nccwpck_require__(4016);
+var http = __nccwpck_require__(8605);
+var https = __nccwpck_require__(7211);
+var events = __nccwpck_require__(8614);
+var assert = __nccwpck_require__(2357);
+var util = __nccwpck_require__(1669);
+
+
+exports.httpOverHttp = httpOverHttp;
+exports.httpsOverHttp = httpsOverHttp;
+exports.httpOverHttps = httpOverHttps;
+exports.httpsOverHttps = httpsOverHttps;
+
+
+function httpOverHttp(options) {
+  var agent = new TunnelingAgent(options);
+  agent.request = http.request;
+  return agent;
+}
+
+function httpsOverHttp(options) {
+  var agent = new TunnelingAgent(options);
+  agent.request = http.request;
+  agent.createSocket = createSecureSocket;
+  agent.defaultPort = 443;
+  return agent;
+}
+
+function httpOverHttps(options) {
+  var agent = new TunnelingAgent(options);
+  agent.request = https.request;
+  return agent;
+}
+
+function httpsOverHttps(options) {
+  var agent = new TunnelingAgent(options);
+  agent.request = https.request;
+  agent.createSocket = createSecureSocket;
+  agent.defaultPort = 443;
+  return agent;
+}
+
+
+function TunnelingAgent(options) {
+  var self = this;
+  self.options = options || {};
+  self.proxyOptions = self.options.proxy || {};
+  self.maxSockets = self.options.maxSockets || http.Agent.defaultMaxSockets;
+  self.requests = [];
+  self.sockets = [];
+
+  self.on('free', function onFree(socket, host, port, localAddress) {
+    var options = toOptions(host, port, localAddress);
+    for (var i = 0, len = self.requests.length; i < len; ++i) {
+      var pending = self.requests[i];
+      if (pending.host === options.host && pending.port === options.port) {
+        // Detect the request to connect same origin server,
+        // reuse the connection.
+        self.requests.splice(i, 1);
+        pending.request.onSocket(socket);
+        return;
+      }
+    }
+    socket.destroy();
+    self.removeSocket(socket);
+  });
+}
+util.inherits(TunnelingAgent, events.EventEmitter);
+
+TunnelingAgent.prototype.addRequest = function addRequest(req, host, port, localAddress) {
+  var self = this;
+  var options = mergeOptions({request: req}, self.options, toOptions(host, port, localAddress));
+
+  if (self.sockets.length >= this.maxSockets) {
+    // We are over limit so we'll add it to the queue.
+    self.requests.push(options);
+    return;
+  }
+
+  // If we are under maxSockets create a new one.
+  self.createSocket(options, function(socket) {
+    socket.on('free', onFree);
+    socket.on('close', onCloseOrRemove);
+    socket.on('agentRemove', onCloseOrRemove);
+    req.onSocket(socket);
+
+    function onFree() {
+      self.emit('free', socket, options);
+    }
+
+    function onCloseOrRemove(err) {
+      self.removeSocket(socket);
+      socket.removeListener('free', onFree);
+      socket.removeListener('close', onCloseOrRemove);
+      socket.removeListener('agentRemove', onCloseOrRemove);
+    }
+  });
+};
+
+TunnelingAgent.prototype.createSocket = function createSocket(options, cb) {
+  var self = this;
+  var placeholder = {};
+  self.sockets.push(placeholder);
+
+  var connectOptions = mergeOptions({}, self.proxyOptions, {
+    method: 'CONNECT',
+    path: options.host + ':' + options.port,
+    agent: false,
+    headers: {
+      host: options.host + ':' + options.port
+    }
+  });
+  if (options.localAddress) {
+    connectOptions.localAddress = options.localAddress;
+  }
+  if (connectOptions.proxyAuth) {
+    connectOptions.headers = connectOptions.headers || {};
+    connectOptions.headers['Proxy-Authorization'] = 'Basic ' +
+        new Buffer(connectOptions.proxyAuth).toString('base64');
+  }
+
+  debug('making CONNECT request');
+  var connectReq = self.request(connectOptions);
+  connectReq.useChunkedEncodingByDefault = false; // for v0.6
+  connectReq.once('response', onResponse); // for v0.6
+  connectReq.once('upgrade', onUpgrade);   // for v0.6
+  connectReq.once('connect', onConnect);   // for v0.7 or later
+  connectReq.once('error', onError);
+  connectReq.end();
+
+  function onResponse(res) {
+    // Very hacky. This is necessary to avoid http-parser leaks.
+    res.upgrade = true;
+  }
+
+  function onUpgrade(res, socket, head) {
+    // Hacky.
+    process.nextTick(function() {
+      onConnect(res, socket, head);
+    });
+  }
+
+  function onConnect(res, socket, head) {
+    connectReq.removeAllListeners();
+    socket.removeAllListeners();
+
+    if (res.statusCode !== 200) {
+      debug('tunneling socket could not be established, statusCode=%d',
+        res.statusCode);
+      socket.destroy();
+      var error = new Error('tunneling socket could not be established, ' +
+        'statusCode=' + res.statusCode);
+      error.code = 'ECONNRESET';
+      options.request.emit('error', error);
+      self.removeSocket(placeholder);
+      return;
+    }
+    if (head.length > 0) {
+      debug('got illegal response body from proxy');
+      socket.destroy();
+      var error = new Error('got illegal response body from proxy');
+      error.code = 'ECONNRESET';
+      options.request.emit('error', error);
+      self.removeSocket(placeholder);
+      return;
+    }
+    debug('tunneling connection has established');
+    self.sockets[self.sockets.indexOf(placeholder)] = socket;
+    return cb(socket);
+  }
+
+  function onError(cause) {
+    connectReq.removeAllListeners();
+
+    debug('tunneling socket could not be established, cause=%s\n',
+          cause.message, cause.stack);
+    var error = new Error('tunneling socket could not be established, ' +
+                          'cause=' + cause.message);
+    error.code = 'ECONNRESET';
+    options.request.emit('error', error);
+    self.removeSocket(placeholder);
+  }
+};
+
+TunnelingAgent.prototype.removeSocket = function removeSocket(socket) {
+  var pos = this.sockets.indexOf(socket)
+  if (pos === -1) {
+    return;
+  }
+  this.sockets.splice(pos, 1);
+
+  var pending = this.requests.shift();
+  if (pending) {
+    // If we have pending requests and a socket gets closed a new one
+    // needs to be created to take over in the pool for the one that closed.
+    this.createSocket(pending, function(socket) {
+      pending.request.onSocket(socket);
+    });
+  }
+};
+
+function createSecureSocket(options, cb) {
+  var self = this;
+  TunnelingAgent.prototype.createSocket.call(self, options, function(socket) {
+    var hostHeader = options.request.getHeader('host');
+    var tlsOptions = mergeOptions({}, self.options, {
+      socket: socket,
+      servername: hostHeader ? hostHeader.replace(/:.*$/, '') : options.host
+    });
+
+    // 0 is dummy port for v0.6
+    var secureSocket = tls.connect(0, tlsOptions);
+    self.sockets[self.sockets.indexOf(socket)] = secureSocket;
+    cb(secureSocket);
+  });
+}
+
+
+function toOptions(host, port, localAddress) {
+  if (typeof host === 'string') { // since v0.10
+    return {
+      host: host,
+      port: port,
+      localAddress: localAddress
+    };
+  }
+  return host; // for v0.11 or later
+}
+
+function mergeOptions(target) {
+  for (var i = 1, len = arguments.length; i < len; ++i) {
+    var overrides = arguments[i];
+    if (typeof overrides === 'object') {
+      var keys = Object.keys(overrides);
+      for (var j = 0, keyLen = keys.length; j < keyLen; ++j) {
+        var k = keys[j];
+        if (overrides[k] !== undefined) {
+          target[k] = overrides[k];
+        }
+      }
+    }
+  }
+  return target;
+}
+
+
+var debug;
+if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
+  debug = function() {
+    var args = Array.prototype.slice.call(arguments);
+    if (typeof args[0] === 'string') {
+      args[0] = 'TUNNEL: ' + args[0];
+    } else {
+      args.unshift('TUNNEL:');
+    }
+    console.error.apply(console, args);
+  }
+} else {
+  debug = function() {};
+}
+exports.debug = debug; // for test
+
+
+/***/ }),
+
+/***/ 2940:
 /***/ ((module) => {
 
 // Returns a wrapper function that returns a wrapped callback
@@ -6209,7 +10047,7 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 153:
+/***/ 7794:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -6235,9 +10073,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TaskcatArtifactManager = void 0;
-var replace_in_file_1 = __nccwpck_require__(983);
-var glob_1 = __nccwpck_require__(957);
-var core = __importStar(__nccwpck_require__(186));
+var replace_in_file_1 = __nccwpck_require__(5983);
+var glob_1 = __nccwpck_require__(1957);
+var core = __importStar(__nccwpck_require__(2186));
 /**
  * Manages the artifacts generated by the taskcat GitHub Action.
  */
@@ -6284,15 +10122,50 @@ var TaskcatArtifactManager = /** @class */ (function () {
     return TaskcatArtifactManager;
 }());
 exports.TaskcatArtifactManager = TaskcatArtifactManager;
-// const awsAccountId = core.getInput("account-id");
-// const artifactClient = artifact.create();
-// const taskcatArtifactManager = new TaskcatArtifactManager();
-// taskcatArtifactManager.maskAndPublishTaskcatArtifacts("123", artifactClient);
 
 
 /***/ }),
 
-/***/ 357:
+/***/ 1153:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+var taskcat_artifact_manager_1 = __nccwpck_require__(7794);
+var artifact = __importStar(__nccwpck_require__(2605));
+var core = __importStar(__nccwpck_require__(2186));
+function run() {
+    var artifactClient = artifact.create();
+    var awsAccountId = core.getInput("aws-account-id");
+    var taskcatArtifactManager = new taskcat_artifact_manager_1.TaskcatArtifactManager();
+    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId, artifactClient);
+}
+run();
+
+
+/***/ }),
+
+/***/ 2357:
 /***/ ((module) => {
 
 "use strict";
@@ -6300,7 +10173,15 @@ module.exports = require("assert");;
 
 /***/ }),
 
-/***/ 614:
+/***/ 6417:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("crypto");;
+
+/***/ }),
+
+/***/ 8614:
 /***/ ((module) => {
 
 "use strict";
@@ -6308,7 +10189,7 @@ module.exports = require("events");;
 
 /***/ }),
 
-/***/ 747:
+/***/ 5747:
 /***/ ((module) => {
 
 "use strict";
@@ -6316,7 +10197,31 @@ module.exports = require("fs");;
 
 /***/ }),
 
-/***/ 87:
+/***/ 8605:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("http");;
+
+/***/ }),
+
+/***/ 7211:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("https");;
+
+/***/ }),
+
+/***/ 1631:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("net");;
+
+/***/ }),
+
+/***/ 2087:
 /***/ ((module) => {
 
 "use strict";
@@ -6324,7 +10229,7 @@ module.exports = require("os");;
 
 /***/ }),
 
-/***/ 622:
+/***/ 5622:
 /***/ ((module) => {
 
 "use strict";
@@ -6332,7 +10237,31 @@ module.exports = require("path");;
 
 /***/ }),
 
-/***/ 867:
+/***/ 630:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("perf_hooks");;
+
+/***/ }),
+
+/***/ 2413:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("stream");;
+
+/***/ }),
+
+/***/ 4016:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("tls");;
+
+/***/ }),
+
+/***/ 3867:
 /***/ ((module) => {
 
 "use strict";
@@ -6340,11 +10269,27 @@ module.exports = require("tty");;
 
 /***/ }),
 
-/***/ 669:
+/***/ 8835:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("url");;
+
+/***/ }),
+
+/***/ 1669:
 /***/ ((module) => {
 
 "use strict";
 module.exports = require("util");;
+
+/***/ }),
+
+/***/ 8761:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("zlib");;
 
 /***/ })
 
@@ -6398,6 +10343,6 @@ module.exports = require("util");;
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nccwpck_require__(153);
+/******/ 	return __nccwpck_require__(1153);
 /******/ })()
 ;

@@ -1,4 +1,4 @@
-import { TaskcatArtifactManager } from "../src/post-entrypoint";
+import { TaskcatArtifactManager } from "../src/taskcat-artifact-manager";
 import { readFileSync, writeFileSync } from "fs";
 import { sync } from "glob";
 import * as artifact from "@actions/artifact";
