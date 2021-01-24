@@ -2,7 +2,7 @@ import { TaskcatArtifactManager } from "../src/post-entrypoint";
 import { readFileSync, writeFileSync } from "fs";
 import { sync } from "glob";
 import * as artifact from "@actions/artifact";
-// const artifact = require("@actions/artifact");
+import * as core from "@actions/core";
 
 jest.mock("fs");
 jest.mock("glob");
@@ -105,16 +105,15 @@ describe("the publishTaskcatOutputs function", () => {
 describe("the maskAndPublishTaskcatArtifacts function", () => {
   const taskcatArtifactManager: TaskcatArtifactManager = new TaskcatArtifactManager();
 
-  it("should be called", () => {
+  it("prints a debug message", () => {
     expect.assertions(1);
 
-    const spy = jest.spyOn(
-      taskcatArtifactManager,
-      "maskAndPublishTaskcatArtifacts"
-    );
+    const spy = jest.spyOn(core, "debug");
 
     taskcatArtifactManager.maskAndPublishTaskcatArtifacts();
 
-    expect(spy).toHaveBeenCalledWith();
+    expect(spy).toHaveBeenCalledWith(
+      "Entered the maskAndPublishTaskcatArtifacts function"
+    );
   });
 });
