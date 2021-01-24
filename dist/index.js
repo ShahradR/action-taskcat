@@ -6249,7 +6249,7 @@ var TaskcatArtifactManager = /** @class */ (function () {
      * directory, and publish them as a GitHub artifact.
      */
     TaskcatArtifactManager.prototype.maskAndPublishTaskcatArtifacts = function () {
-        core.debug("Entered the maskAndPublishTaskcatArtifacts function");
+        core.info("Entered the maskAndPublishTaskcatArtifacts function");
     };
     /**
      * Masks the AWS account ID from the taskcat_output logs.

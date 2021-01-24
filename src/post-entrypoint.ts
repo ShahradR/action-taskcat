@@ -12,7 +12,7 @@ class TaskcatArtifactManager {
    * directory, and publish them as a GitHub artifact.
    */
   public maskAndPublishTaskcatArtifacts(): void {
-    core.debug("Entered the maskAndPublishTaskcatArtifacts function");
+    core.info("Entered the maskAndPublishTaskcatArtifacts function");
   }
 
   /**

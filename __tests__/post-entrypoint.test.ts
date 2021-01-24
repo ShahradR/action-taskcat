@@ -108,7 +108,7 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
   it("prints a debug message", () => {
     expect.assertions(1);
 
-    const spy = jest.spyOn(core, "debug");
+    const spy = jest.spyOn(core, "info");
 
     taskcatArtifactManager.maskAndPublishTaskcatArtifacts();
 
