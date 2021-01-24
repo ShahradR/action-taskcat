@@ -6250,7 +6250,6 @@ var TaskcatArtifactManager = /** @class */ (function () {
      */
     TaskcatArtifactManager.prototype.maskAndPublishTaskcatArtifacts = function () {
         core.debug("Entered the maskAndPublishTaskcatArtifacts function");
-        return;
     };
     /**
      * Masks the AWS account ID from the taskcat_output logs.

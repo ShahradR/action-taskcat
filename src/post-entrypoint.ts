@@ -13,7 +13,6 @@ class TaskcatArtifactManager {
    */
   public maskAndPublishTaskcatArtifacts(): void {
     core.debug("Entered the maskAndPublishTaskcatArtifacts function");
-    return;
   }
 
   /**
