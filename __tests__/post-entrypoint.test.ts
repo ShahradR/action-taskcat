@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { sync } from "glob";
 import * as artifact from "@actions/artifact";
 import * as core from "@actions/core";
+import * as artifactInternal from "@actions/artifact/lib/internal/artifact-client";
 
 jest.mock("fs");
 jest.mock("glob");
@@ -89,6 +90,7 @@ describe("the publishTaskcatOutputs function", () => {
     ]);
 
     const spy = jest.spyOn(uploadArtifact, "uploadArtifact");
+
     taskcatArtifactManager.publishTaskcatOutputs(
       uploadArtifact,
       "taskcat_outputs/"
@@ -103,17 +105,70 @@ describe("the publishTaskcatOutputs function", () => {
 });
 
 describe("the maskAndPublishTaskcatArtifacts function", () => {
+  jest.mock("@actions/artifact");
+  jest.mock("@actions/artifact/lib/internal/artifact-client");
+
   const taskcatArtifactManager: TaskcatArtifactManager = new TaskcatArtifactManager();
+
+  const uploadArtifact = jest.fn(() => ({
+    uploadArtifact: jest.fn(),
+    downloadArtifact: jest.fn(),
+    downloadAllArtifacts: jest.fn(),
+  }));
+
+  const MockedArtifactClient = (uploadArtifact as unknown) as jest.MockedClass<
+    typeof artifactInternal.DefaultArtifactClient
+  >;
 
   it("prints a debug message", () => {
     expect.assertions(1);
 
-    const spy = jest.spyOn(core, "info");
+    const infoSpy = jest.spyOn(core, "info");
 
-    taskcatArtifactManager.maskAndPublishTaskcatArtifacts();
+    jest.spyOn(taskcatArtifactManager, "maskAccountId").mockReturnValue();
+    jest
+      .spyOn(taskcatArtifactManager, "publishTaskcatOutputs")
+      .mockReturnValue();
 
-    expect(spy).toHaveBeenCalledWith(
+    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
+      "123456789",
+      new MockedArtifactClient()
+    );
+
+    expect(infoSpy).toHaveBeenCalledWith(
       "Entered the maskAndPublishTaskcatArtifacts function"
     );
+  });
+
+  it("calls the maskAccountId function", () => {
+    expect.assertions(1);
+
+    const spy = jest
+      .spyOn(taskcatArtifactManager, "maskAccountId")
+      .mockReturnValue();
+
+    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
+      "123456789",
+      new MockedArtifactClient()
+    );
+
+    expect(spy).toHaveBeenCalledWith("123456789", "taskcat_outputs/");
+  });
+
+  it("calls the publishTaskcatOutputs function", () => {
+    expect.assertions(1);
+
+    jest.spyOn(taskcatArtifactManager, "maskAccountId").mockReturnValue();
+
+    const spy = jest
+      .spyOn(taskcatArtifactManager, "publishTaskcatOutputs")
+      .mockReturnValue();
+
+    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
+      "123456789",
+      new MockedArtifactClient()
+    );
+
+    expect(spy).toHaveBeenCalledWith(expect.anything(), "taskcat_outputs/");
   });
 });

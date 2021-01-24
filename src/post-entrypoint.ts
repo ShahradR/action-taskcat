@@ -1,5 +1,5 @@
 import { ReplaceInFileConfig, sync } from "replace-in-file";
-import { ArtifactClient } from "@actions/artifact";
+import * as artifact from "@actions/artifact";
 import { glob } from "glob";
 import * as core from "@actions/core";
 
@@ -11,8 +11,13 @@ class TaskcatArtifactManager {
    * Mask the AWS account ID from the log files generated in the taskcat_outputs
    * directory, and publish them as a GitHub artifact.
    */
-  public maskAndPublishTaskcatArtifacts(): void {
+  public maskAndPublishTaskcatArtifacts(
+    awsAccountId: string,
+    artifactClient: artifact.ArtifactClient
+  ): void {
     core.info("Entered the maskAndPublishTaskcatArtifacts function");
+    this.maskAccountId(awsAccountId, "taskcat_outputs/");
+    this.publishTaskcatOutputs(artifactClient, "taskcat_outputs/");
   }
 
   /**
@@ -43,7 +48,7 @@ class TaskcatArtifactManager {
    * @param filePath - the file path to the `taskcat_outputs` directory
    */
   public publishTaskcatOutputs(
-    artifactClient: ArtifactClient,
+    artifactClient: artifact.ArtifactClient,
     filePath: string
   ): void {
     const taskcatLogs: string[] = glob.sync(filePath);
@@ -54,5 +59,8 @@ class TaskcatArtifactManager {
 
 export { TaskcatArtifactManager };
 
-const taskcatArtifactManager = new TaskcatArtifactManager();
-taskcatArtifactManager.maskAndPublishTaskcatArtifacts();
+// const awsAccountId = core.getInput("account-id");
+// const artifactClient = artifact.create();
+
+// const taskcatArtifactManager = new TaskcatArtifactManager();
+// taskcatArtifactManager.maskAndPublishTaskcatArtifacts("123", artifactClient);

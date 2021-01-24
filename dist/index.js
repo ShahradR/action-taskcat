@@ -6248,8 +6248,10 @@ var TaskcatArtifactManager = /** @class */ (function () {
      * Mask the AWS account ID from the log files generated in the taskcat_outputs
      * directory, and publish them as a GitHub artifact.
      */
-    TaskcatArtifactManager.prototype.maskAndPublishTaskcatArtifacts = function () {
+    TaskcatArtifactManager.prototype.maskAndPublishTaskcatArtifacts = function (awsAccountId, artifactClient) {
         core.info("Entered the maskAndPublishTaskcatArtifacts function");
+        this.maskAccountId(awsAccountId, "taskcat_outputs/");
+        this.publishTaskcatOutputs(artifactClient, "taskcat_outputs/");
     };
     /**
      * Masks the AWS account ID from the taskcat_output logs.
@@ -6282,8 +6284,10 @@ var TaskcatArtifactManager = /** @class */ (function () {
     return TaskcatArtifactManager;
 }());
 exports.TaskcatArtifactManager = TaskcatArtifactManager;
-var taskcatArtifactManager = new TaskcatArtifactManager();
-taskcatArtifactManager.maskAndPublishTaskcatArtifacts();
+// const awsAccountId = core.getInput("account-id");
+// const artifactClient = artifact.create();
+// const taskcatArtifactManager = new TaskcatArtifactManager();
+// taskcatArtifactManager.maskAndPublishTaskcatArtifacts("123", artifactClient);
 
 
 /***/ }),
