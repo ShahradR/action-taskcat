@@ -10150,13 +10150,19 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+var child_process_1 = __importDefault(__nccwpck_require__(3129));
 var taskcat_artifact_manager_1 = __nccwpck_require__(7794);
 var artifact = __importStar(__nccwpck_require__(2605));
 var core = __importStar(__nccwpck_require__(2186));
 function run() {
     var artifactClient = artifact.create();
     var awsAccountId = core.getInput("aws-account-id");
+    var taskcatCommands = core.getInput("commands");
+    child_process_1.default.execSync("taskcat " + taskcatCommands);
     var taskcatArtifactManager = new taskcat_artifact_manager_1.TaskcatArtifactManager();
     taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId, artifactClient);
 }
@@ -10170,6 +10176,14 @@ run();
 
 "use strict";
 module.exports = require("assert");;
+
+/***/ }),
+
+/***/ 3129:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("child_process");;
 
 /***/ }),
 

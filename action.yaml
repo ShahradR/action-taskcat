@@ -27,6 +27,3 @@ inputs:
 runs:
   using: docker
   image: Dockerfile
-  args:
-    - ${{ inputs.commands }}
-  post-entrypoint: /dist/index.js
