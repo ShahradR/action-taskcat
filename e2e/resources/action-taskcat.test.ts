@@ -34,11 +34,13 @@ describe("integration tests", () => {
       let actOutput = "";
 
       try {
-        cp.execSync(
-          `act \
+        actOutput = cp
+          .execSync(
+            `act \
             --job taskcat \
             --directory ./e2e/resources/default/`
-        );
+          )
+          .toString();
       } catch (error) {
         actOutput = error.stdout.toString();
         exitCode = error.status;

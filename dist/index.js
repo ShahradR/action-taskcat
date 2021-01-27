@@ -10089,7 +10089,7 @@ var TaskcatArtifactManager = /** @class */ (function () {
     TaskcatArtifactManager.prototype.maskAndPublishTaskcatArtifacts = function (awsAccountId, artifactClient) {
         core.info("Entered the maskAndPublishTaskcatArtifacts function");
         this.maskAccountId(awsAccountId, "taskcat_outputs/");
-        this.publishTaskcatOutputs(artifactClient, "taskcat_outputs/");
+        this.publishTaskcatOutputs(artifactClient, process.env.GITHUB_WORKSPACE + "/taskcat_outputs/");
     };
     /**
      * Masks the AWS account ID from the taskcat_output logs.
@@ -10116,7 +10116,7 @@ var TaskcatArtifactManager = /** @class */ (function () {
      * @param filePath - the file path to the `taskcat_outputs` directory
      */
     TaskcatArtifactManager.prototype.publishTaskcatOutputs = function (artifactClient, filePath) {
-        var taskcatLogs = glob_1.glob.sync(filePath);
+        var taskcatLogs = glob_1.glob.sync(filePath + "*");
         artifactClient.uploadArtifact("taskcat_outputs", taskcatLogs, filePath);
     };
     return TaskcatArtifactManager;
@@ -10162,9 +10162,25 @@ function run() {
     var artifactClient = artifact.create();
     var awsAccountId = core.getInput("aws-account-id");
     var taskcatCommands = core.getInput("commands");
-    child_process_1.default.execSync("taskcat " + taskcatCommands);
-    var taskcatArtifactManager = new taskcat_artifact_manager_1.TaskcatArtifactManager();
-    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId, artifactClient);
+    core.info("Received commands: " + taskcatCommands);
+    var newList = taskcatCommands.split(" ");
+    newList.push("--minimal-output");
+    var child = child_process_1.default.spawn("taskcat", newList, {
+        stdio: ["ignore", "pipe", "pipe"],
+    });
+    child.stdout.setEncoding("utf-8");
+    child.stderr.setEncoding("utf-8");
+    child.stderr.pipe(process.stdout);
+    child.stdout.on("data", function (data) {
+        core.info(data);
+    });
+    child.on("exit", function (exitCode) {
+        var taskcatArtifactManager = new taskcat_artifact_manager_1.TaskcatArtifactManager();
+        taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId, artifactClient);
+        if (exitCode !== 0) {
+            core.setFailed("The taskcat test did not complete successfully.");
+        }
+    });
 }
 run();
 

@@ -17,7 +17,10 @@ class TaskcatArtifactManager {
   ): void {
     core.info("Entered the maskAndPublishTaskcatArtifacts function");
     this.maskAccountId(awsAccountId, "taskcat_outputs/");
-    this.publishTaskcatOutputs(artifactClient, "taskcat_outputs/");
+    this.publishTaskcatOutputs(
+      artifactClient,
+      process.env.GITHUB_WORKSPACE + "/taskcat_outputs/"
+    );
   }
 
   /**
@@ -51,7 +54,7 @@ class TaskcatArtifactManager {
     artifactClient: artifact.ArtifactClient,
     filePath: string
   ): void {
-    const taskcatLogs: string[] = glob.sync(filePath);
+    const taskcatLogs: string[] = glob.sync(filePath + "*");
 
     artifactClient.uploadArtifact("taskcat_outputs", taskcatLogs, filePath);
   }

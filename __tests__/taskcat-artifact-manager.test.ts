@@ -27,6 +27,8 @@ describe("the maskAccountId() function", () => {
     const fileContents = "abcd1234";
     const awsAccountId = "1234567890";
 
+    process.env.GITHUB_WORKSPACE = "/github/workspace";
+
     mockedGlobSync.mockReturnValue(["taskcat_outputs/test.txt"]);
     mockedReadFileSync.mockReturnValue(fileContents);
 
@@ -76,9 +78,7 @@ describe("the maskAccountId() function", () => {
 
 describe("the publishTaskcatOutputs function", () => {
   const taskcatArtifactManager: TaskcatArtifactManager = new TaskcatArtifactManager();
-
   const mockedGlobSync = (sync as unknown) as jest.MockedFunction<typeof sync>;
-
   const uploadArtifact = artifact.create();
 
   it("should retrieve all files from the taskcat_output directory", () => {
@@ -169,6 +169,9 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
       new MockedArtifactClient()
     );
 
-    expect(spy).toHaveBeenCalledWith(expect.anything(), "taskcat_outputs/");
+    expect(spy).toHaveBeenCalledWith(
+      expect.anything(),
+      "/github/workspace/taskcat_outputs/"
+    );
   });
 });
