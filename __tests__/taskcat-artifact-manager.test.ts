@@ -1,4 +1,6 @@
-import { TaskcatArtifactManager } from "../src/taskcat-artifact-manager";
+import { TaskcatArtifactManager } from "../src/interfaces";
+import { prodContainer } from "../src/inversify.config";
+import { TYPES } from "../src/types";
 import { readFileSync, writeFileSync } from "fs";
 import { sync } from "glob";
 import * as artifact from "@actions/artifact";
@@ -9,7 +11,9 @@ jest.mock("fs");
 jest.mock("glob");
 
 describe("the maskAccountId() function", () => {
-  const taskcatArtifactManager: TaskcatArtifactManager = new TaskcatArtifactManager();
+  const taskcatArtifactManager: TaskcatArtifactManager = prodContainer.get<TaskcatArtifactManager>(
+    TYPES.TaskcatArtifactManager
+  );
 
   const mockedReadFileSync = (readFileSync as unknown) as jest.MockedFunction<
     typeof readFileSync
@@ -77,7 +81,9 @@ describe("the maskAccountId() function", () => {
 });
 
 describe("the publishTaskcatOutputs function", () => {
-  const taskcatArtifactManager: TaskcatArtifactManager = new TaskcatArtifactManager();
+  const taskcatArtifactManager: TaskcatArtifactManager = prodContainer.get<TaskcatArtifactManager>(
+    TYPES.TaskcatArtifactManager
+  );
   const mockedGlobSync = (sync as unknown) as jest.MockedFunction<typeof sync>;
   const uploadArtifact = artifact.create();
 
@@ -108,7 +114,9 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
   jest.mock("@actions/artifact");
   jest.mock("@actions/artifact/lib/internal/artifact-client");
 
-  const taskcatArtifactManager: TaskcatArtifactManager = new TaskcatArtifactManager();
+  const taskcatArtifactManager: TaskcatArtifactManager = prodContainer.get<TaskcatArtifactManager>(
+    TYPES.TaskcatArtifactManager
+  );
 
   const uploadArtifact = jest.fn(() => ({
     uploadArtifact: jest.fn(),

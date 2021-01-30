@@ -1,5 +1,7 @@
 import cp from "child_process";
-import { TaskcatArtifactManager } from "./taskcat-artifact-manager";
+import { prodContainer } from "./inversify.config";
+import { TaskcatArtifactManager } from "./interfaces";
+import { TYPES } from "./types";
 import * as artifact from "@actions/artifact";
 import * as core from "@actions/core";
 
@@ -25,7 +27,9 @@ function run() {
   });
 
   child.on("exit", (exitCode) => {
-    const taskcatArtifactManager = new TaskcatArtifactManager();
+    const taskcatArtifactManager = prodContainer.get<TaskcatArtifactManager>(
+      TYPES.TaskcatArtifactManager
+    );
     taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
       awsAccountId,
       artifactClient
