@@ -1,44 +1,59 @@
 import cp from "child_process";
 import { prodContainer } from "./inversify.config";
-import { TaskcatArtifactManager } from "./interfaces";
+import { PostEntrypoint, TaskcatArtifactManager, Artifact } from "./interfaces";
 import { TYPES } from "./types";
-import * as artifact from "@actions/artifact";
 import * as core from "@actions/core";
+import { inject, injectable } from "inversify";
 
-function run() {
-  const artifactClient = artifact.create();
-  const awsAccountId = core.getInput("aws-account-id");
-  const taskcatCommands = core.getInput("commands");
-  core.info("Received commands: " + taskcatCommands);
+@injectable()
+export class PostEntrypointImpl implements PostEntrypoint {
+  private _artifact: Artifact;
+  private _taskcatArtifactManager: TaskcatArtifactManager;
 
-  const newList = taskcatCommands.split(" ");
-  newList.push("--minimal-output");
+  public constructor(
+    @inject(TYPES.Artifact) artifact: Artifact,
+    @inject(TYPES.TaskcatArtifactManager)
+    taskcatArtifactManager: TaskcatArtifactManager
+  ) {
+    this._artifact = artifact;
+    this._taskcatArtifactManager = taskcatArtifactManager;
+  }
 
-  const child = cp.spawn("taskcat", newList, {
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  public run() {
+    const awsAccountId = core.getInput("aws-account-id");
+    const taskcatCommands = core.getInput("commands");
+    core.info("Received commands: " + taskcatCommands);
 
-  child.stdout.setEncoding("utf-8");
-  child.stderr.setEncoding("utf-8");
-  child.stderr.pipe(process.stdout);
+    const newList = taskcatCommands.split(" ");
+    newList.push("--minimal-output");
 
-  child.stdout.on("data", (data) => {
-    core.info(data);
-  });
+    const child = cp.spawn("taskcat", newList, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
 
-  child.on("exit", (exitCode) => {
-    const taskcatArtifactManager = prodContainer.get<TaskcatArtifactManager>(
-      TYPES.TaskcatArtifactManager
-    );
-    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
-      awsAccountId,
-      artifactClient
-    );
+    child.stdout.setEncoding("utf-8");
+    child.stderr.setEncoding("utf-8");
+    child.stderr.pipe(process.stdout);
 
-    if (exitCode !== 0) {
-      core.setFailed("The taskcat test did not complete successfully.");
-    }
-  });
+    child.stdout.on("data", (data) => {
+      core.info(data);
+    });
+
+    child.on("exit", (exitCode) => {
+      this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
+        awsAccountId,
+        this._artifact.create()
+      );
+
+      if (exitCode !== 0) {
+        core.setFailed("The taskcat test did not complete successfully.");
+      }
+    });
+  }
 }
 
-run();
+const postEntrypoint = prodContainer.get<PostEntrypoint>(
+  TYPES.PostEntrypoint
+);
+
+postEntrypoint.run();
