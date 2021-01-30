@@ -10,6 +10,8 @@
   "dependencies": {
     "@actions/artifact": "^0.5.0",
     "@actions/core": "^1.2.6",
+    "inversify": "^5.0.5",
+    "reflect-metadata": "^0.1.13",
     "replace-in-file": "^6.1.0"
   },
   "devDependencies": {
