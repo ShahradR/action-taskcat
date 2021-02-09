@@ -1,0 +1,16 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: |
+  Dummy CloudFormation template used with taskcat test scenarios. This
+  template attempts to create a dummy resource, but the condition is always
+  false - as such, this template never creates anything.
+
+Conditions:
+  AlwaysFalse:
+    Fn::Equals: [true, false]
+
+Resources:
+  DummyResource:
+    Type: Custom::DummyResource
+    Condition: AlwaysFalse
