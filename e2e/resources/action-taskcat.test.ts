@@ -65,4 +65,56 @@ describe("integration tests", () => {
       );
     });
   });
+
+  describe("when update_taskcat is set to true", () => {
+    it("runs the latest version of taskcat", () => {
+      expect.assertions(3);
+
+      const awsAccessKeyId: string | undefined = process.env.AWS_ACCESS_KEY_ID;
+      const awsSecretAccessKey: string | undefined =
+        process.env.AWS_SECRET_ACCESS_KEY;
+
+      expect(awsAccessKeyId).not.toBeUndefined();
+      expect(awsSecretAccessKey).not.toBeUndefined();
+
+      const actOutput: string = cp
+        .execSync(
+          `act \
+        --job taskcat \
+        --directory ./e2e/resources/taskcat_upgrade/true/ \
+        --secret AWS_ACCESS_KEY_ID=${awsAccessKeyId} \
+        --secret AWS_SECRET_ACCESS_KEY=${awsSecretAccessKey}`
+        )
+        .toString();
+
+      expect(actOutput).not.toContain(
+        "A newer version of taskcat is available"
+      );
+    });
+  });
+
+  describe("when update_taskcat is set to false", () => {
+    it("runs an older version of taskcat", () => {
+      expect.assertions(3);
+
+      const awsAccessKeyId: string | undefined = process.env.AWS_ACCESS_KEY_ID;
+      const awsSecretAccessKey: string | undefined =
+        process.env.AWS_SECRET_ACCESS_KEY;
+
+      expect(awsAccessKeyId).not.toBeUndefined();
+      expect(awsSecretAccessKey).not.toBeUndefined();
+
+      const actOutput: string = cp
+        .execSync(
+          `act \
+        --job taskcat \
+        --directory ./e2e/resources/taskcat_upgrade/false/ \
+        --secret AWS_ACCESS_KEY_ID=${awsAccessKeyId} \
+        --secret AWS_SECRET_ACCESS_KEY=${awsSecretAccessKey}`
+        )
+        .toString();
+
+      expect(actOutput).toContain("A newer version of taskcat is available");
+    });
+  });
 });
