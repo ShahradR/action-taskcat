@@ -1,5 +1,6 @@
 import * as artifact from "@actions/artifact";
 import * as core from "@actions/core";
+import * as cp from "child_process";
 
 export interface PostEntrypoint {
   run(): void;
@@ -20,3 +21,5 @@ export interface TaskcatArtifactManager {
 export type Artifact = typeof artifact;
 
 export type Core = typeof core;
+
+export type ChildProcess = typeof cp;
