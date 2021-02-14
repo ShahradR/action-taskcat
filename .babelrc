@@ -1,8 +1,12 @@
 {
-  "presets": ["@babel/env", "@babel/preset-typescript"],
+  "presets": [
+    "@babel/env",
+    ["@babel/preset-typescript", { "onlyRemoveTypeImports": true }]
+  ],
   "plugins": [
     ["@babel/plugin-proposal-decorators", { "legacy": true }],
     ["@babel/proposal-class-properties", { "loose": true }],
+    "babel-plugin-parameter-decorator",
     "@babel/proposal-object-rest-spread"
   ]
 }
