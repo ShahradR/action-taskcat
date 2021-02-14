@@ -1,9 +1,9 @@
-import cp from "child_process";
 import {
   PostEntrypoint,
   TaskcatArtifactManager,
   Artifact,
   Core,
+  ChildProcess,
 } from "./interfaces";
 import { TYPES } from "./types";
 import { inject, injectable } from "inversify";
@@ -13,15 +13,18 @@ export class PostEntrypointImpl implements PostEntrypoint {
   private _artifact: Artifact;
   private _taskcatArtifactManager: TaskcatArtifactManager;
   private _core: Core;
+  private _cp: ChildProcess;
 
   public constructor(
     @inject(TYPES.Artifact) artifact: Artifact,
     @inject(TYPES.Core) core: Core,
+    @inject(TYPES.ChildProcess) cp: ChildProcess,
     @inject(TYPES.TaskcatArtifactManager)
     taskcatArtifactManager: TaskcatArtifactManager
   ) {
     this._artifact = artifact;
     this._core = core;
+    this._cp = cp;
     this._taskcatArtifactManager = taskcatArtifactManager;
   }
 
@@ -33,7 +36,7 @@ export class PostEntrypointImpl implements PostEntrypoint {
     const newList = taskcatCommands.split(" ");
     newList.push("--minimal-output");
 
-    const child = cp.spawn("taskcat", newList, {
+    const child = this._cp.spawn("taskcat", newList, {
       stdio: ["ignore", "pipe", "pipe"],
     });
 

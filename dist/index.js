@@ -13594,6 +13594,7 @@ var taskcat_artifact_manager_1 = __nccwpck_require__(7794);
 var post_entrypoint_1 = __nccwpck_require__(703);
 var artifact = __importStar(__nccwpck_require__(2605));
 var core = __importStar(__nccwpck_require__(2186));
+var cp = __importStar(__nccwpck_require__(3129));
 var prodContainer = new inversify_1.Container();
 exports.prodContainer = prodContainer;
 prodContainer
@@ -13601,6 +13602,7 @@ prodContainer
     .to(taskcat_artifact_manager_1.TaskcatArtifactManagerImpl);
 prodContainer.bind(types_1.TYPES.Artifact).toConstantValue(artifact);
 prodContainer.bind(types_1.TYPES.Core).toConstantValue(core);
+prodContainer.bind(types_1.TYPES.ChildProcess).toConstantValue(cp);
 prodContainer.bind(types_1.TYPES.PostEntrypoint).to(post_entrypoint_1.PostEntrypointImpl);
 
 
@@ -13623,18 +13625,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PostEntrypointImpl = void 0;
-var child_process_1 = __importDefault(__nccwpck_require__(3129));
 var types_1 = __nccwpck_require__(8154);
 var inversify_1 = __nccwpck_require__(7771);
 var PostEntrypointImpl = /** @class */ (function () {
-    function PostEntrypointImpl(artifact, core, taskcatArtifactManager) {
+    function PostEntrypointImpl(artifact, core, cp, taskcatArtifactManager) {
         this._artifact = artifact;
         this._core = core;
+        this._cp = cp;
         this._taskcatArtifactManager = taskcatArtifactManager;
     }
     PostEntrypointImpl.prototype.run = function () {
@@ -13644,7 +13643,7 @@ var PostEntrypointImpl = /** @class */ (function () {
         this._core.info("Received commands: " + taskcatCommands);
         var newList = taskcatCommands.split(" ");
         newList.push("--minimal-output");
-        var child = child_process_1.default.spawn("taskcat", newList, {
+        var child = this._cp.spawn("taskcat", newList, {
             stdio: ["ignore", "pipe", "pipe"],
         });
         child.stdout.setEncoding("utf-8");
@@ -13664,8 +13663,9 @@ var PostEntrypointImpl = /** @class */ (function () {
         inversify_1.injectable(),
         __param(0, inversify_1.inject(types_1.TYPES.Artifact)),
         __param(1, inversify_1.inject(types_1.TYPES.Core)),
-        __param(2, inversify_1.inject(types_1.TYPES.TaskcatArtifactManager)),
-        __metadata("design:paramtypes", [Object, Object, Object])
+        __param(2, inversify_1.inject(types_1.TYPES.ChildProcess)),
+        __param(3, inversify_1.inject(types_1.TYPES.TaskcatArtifactManager)),
+        __metadata("design:paramtypes", [Object, Object, Object, Object])
     ], PostEntrypointImpl);
     return PostEntrypointImpl;
 }());
@@ -13775,6 +13775,7 @@ var TYPES = {
     Artifact: Symbol.for("Artifact"),
     Core: Symbol.for("Core"),
     PostEntrypoint: Symbol.for("PostEntrypoint"),
+    ChildProcess: Symbol.for("ChildProcess")
 };
 exports.TYPES = TYPES;
 
