@@ -13593,12 +13593,14 @@ var types_1 = __nccwpck_require__(8154);
 var taskcat_artifact_manager_1 = __nccwpck_require__(7794);
 var post_entrypoint_1 = __nccwpck_require__(703);
 var artifact = __importStar(__nccwpck_require__(2605));
+var core = __importStar(__nccwpck_require__(2186));
 var prodContainer = new inversify_1.Container();
 exports.prodContainer = prodContainer;
 prodContainer
     .bind(types_1.TYPES.TaskcatArtifactManager)
     .to(taskcat_artifact_manager_1.TaskcatArtifactManagerImpl);
 prodContainer.bind(types_1.TYPES.Artifact).toConstantValue(artifact);
+prodContainer.bind(types_1.TYPES.Core).toConstantValue(core);
 prodContainer.bind(types_1.TYPES.PostEntrypoint).to(post_entrypoint_1.PostEntrypointImpl);
 
 
@@ -13609,30 +13611,11 @@ prodContainer.bind(types_1.TYPES.PostEntrypoint).to(post_entrypoint_1.PostEntryp
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
 };
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
@@ -13647,18 +13630,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PostEntrypointImpl = void 0;
 var child_process_1 = __importDefault(__nccwpck_require__(3129));
 var types_1 = __nccwpck_require__(8154);
-var core = __importStar(__nccwpck_require__(2186));
 var inversify_1 = __nccwpck_require__(7771);
 var PostEntrypointImpl = /** @class */ (function () {
-    function PostEntrypointImpl(artifact, taskcatArtifactManager) {
+    function PostEntrypointImpl(artifact, core, taskcatArtifactManager) {
         this._artifact = artifact;
+        this._core = core;
         this._taskcatArtifactManager = taskcatArtifactManager;
     }
     PostEntrypointImpl.prototype.run = function () {
         var _this = this;
-        var awsAccountId = core.getInput("aws-account-id");
-        var taskcatCommands = core.getInput("commands");
-        core.info("Received commands: " + taskcatCommands);
+        var awsAccountId = this._core.getInput("aws-account-id");
+        var taskcatCommands = this._core.getInput("commands");
+        this._core.info("Received commands: " + taskcatCommands);
         var newList = taskcatCommands.split(" ");
         newList.push("--minimal-output");
         var child = child_process_1.default.spawn("taskcat", newList, {
@@ -13668,20 +13651,21 @@ var PostEntrypointImpl = /** @class */ (function () {
         child.stderr.setEncoding("utf-8");
         child.stderr.pipe(process.stdout);
         child.stdout.on("data", function (data) {
-            core.info(data);
+            _this._core.info(data);
         });
         child.on("exit", function (exitCode) {
             _this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId, _this._artifact.create());
             if (exitCode !== 0) {
-                core.setFailed("The taskcat test did not complete successfully.");
+                _this._core.setFailed("The taskcat test did not complete successfully.");
             }
         });
     };
     PostEntrypointImpl = __decorate([
         inversify_1.injectable(),
         __param(0, inversify_1.inject(types_1.TYPES.Artifact)),
-        __param(1, inversify_1.inject(types_1.TYPES.TaskcatArtifactManager)),
-        __metadata("design:paramtypes", [Object, Object])
+        __param(1, inversify_1.inject(types_1.TYPES.Core)),
+        __param(2, inversify_1.inject(types_1.TYPES.TaskcatArtifactManager)),
+        __metadata("design:paramtypes", [Object, Object, Object])
     ], PostEntrypointImpl);
     return PostEntrypointImpl;
 }());
@@ -13789,6 +13773,7 @@ exports.TYPES = void 0;
 var TYPES = {
     TaskcatArtifactManager: Symbol.for("TaskcatArtifactManager"),
     Artifact: Symbol.for("Artifact"),
+    Core: Symbol.for("Core"),
     PostEntrypoint: Symbol.for("PostEntrypoint"),
 };
 exports.TYPES = TYPES;

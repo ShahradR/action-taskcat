@@ -1,27 +1,34 @@
 import cp from "child_process";
-import { PostEntrypoint, TaskcatArtifactManager, Artifact } from "./interfaces";
+import {
+  PostEntrypoint,
+  TaskcatArtifactManager,
+  Artifact,
+  Core,
+} from "./interfaces";
 import { TYPES } from "./types";
-import * as core from "@actions/core";
 import { inject, injectable } from "inversify";
 
 @injectable()
 export class PostEntrypointImpl implements PostEntrypoint {
   private _artifact: Artifact;
   private _taskcatArtifactManager: TaskcatArtifactManager;
+  private _core: Core;
 
   public constructor(
     @inject(TYPES.Artifact) artifact: Artifact,
+    @inject(TYPES.Core) core: Core,
     @inject(TYPES.TaskcatArtifactManager)
     taskcatArtifactManager: TaskcatArtifactManager
   ) {
     this._artifact = artifact;
+    this._core = core;
     this._taskcatArtifactManager = taskcatArtifactManager;
   }
 
   public run() {
-    const awsAccountId = core.getInput("aws-account-id");
-    const taskcatCommands = core.getInput("commands");
-    core.info("Received commands: " + taskcatCommands);
+    const awsAccountId = this._core.getInput("aws-account-id");
+    const taskcatCommands = this._core.getInput("commands");
+    this._core.info("Received commands: " + taskcatCommands);
 
     const newList = taskcatCommands.split(" ");
     newList.push("--minimal-output");
@@ -35,7 +42,7 @@ export class PostEntrypointImpl implements PostEntrypoint {
     child.stderr.pipe(process.stdout);
 
     child.stdout.on("data", (data) => {
-      core.info(data);
+      this._core.info(data);
     });
 
     child.on("exit", (exitCode) => {
@@ -45,7 +52,7 @@ export class PostEntrypointImpl implements PostEntrypoint {
       );
 
       if (exitCode !== 0) {
-        core.setFailed("The taskcat test did not complete successfully.");
+        this._core.setFailed("The taskcat test did not complete successfully.");
       }
     });
   }
