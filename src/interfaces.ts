@@ -1,4 +1,5 @@
 import * as artifact from "@actions/artifact";
+import * as core from "@actions/core";
 
 export interface PostEntrypoint {
   run(): void;
@@ -17,3 +18,5 @@ export interface TaskcatArtifactManager {
 }
 
 export type Artifact = typeof artifact;
+
+export type Core = typeof core;
