@@ -1,7 +1,5 @@
 import { injectable, inject } from "inversify";
-import "reflect-metadata";
 import { TaskcatArtifactManager } from "./interfaces";
-import { TYPES } from "./types";
 import { ReplaceInFileConfig, sync } from "replace-in-file";
 import * as artifact from "@actions/artifact";
 import { glob } from "glob";
