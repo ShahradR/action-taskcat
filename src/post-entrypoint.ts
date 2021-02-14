@@ -1,5 +1,4 @@
 import cp from "child_process";
-import { prodContainer } from "./inversify.config";
 import { PostEntrypoint, TaskcatArtifactManager, Artifact } from "./interfaces";
 import { TYPES } from "./types";
 import * as core from "@actions/core";
@@ -51,9 +50,3 @@ export class PostEntrypointImpl implements PostEntrypoint {
     });
   }
 }
-
-const postEntrypoint = prodContainer.get<PostEntrypoint>(
-  TYPES.PostEntrypoint
-);
-
-postEntrypoint.run();
