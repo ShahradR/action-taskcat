@@ -104,7 +104,7 @@ jobs:
         with:
           commands: test run --project-root ./e2e/resources/default
           update_taskcat: true
-          update_lint: true
+          update_cfn_lint: true
 
   vale:
     name: Run Vale
