@@ -4,6 +4,7 @@ const TYPES = {
   Core: Symbol.for("Core"),
   PostEntrypoint: Symbol.for("PostEntrypoint"),
   ChildProcess: Symbol.for("ChildProcess"),
+  ArtifactClient: Symbol.for("ArtifactClient"),
 };
 
 export { TYPES };
