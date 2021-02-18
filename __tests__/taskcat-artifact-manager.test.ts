@@ -3,6 +3,7 @@ import { prodContainer } from "../src/inversify.config";
 import { TYPES } from "../src/types";
 import { readFileSync, writeFileSync } from "fs";
 import { sync } from "glob";
+import { mock } from "jest-mock-extended";
 import * as artifact from "@actions/artifact";
 import * as core from "@actions/core";
 import * as artifactInternal from "@actions/artifact/lib/internal/artifact-client";
@@ -118,15 +119,7 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
     TYPES.TaskcatArtifactManager
   );
 
-  const uploadArtifact = jest.fn(() => ({
-    uploadArtifact: jest.fn(),
-    downloadArtifact: jest.fn(),
-    downloadAllArtifacts: jest.fn(),
-  }));
-
-  const MockedArtifactClient = (uploadArtifact as unknown) as jest.MockedClass<
-    typeof artifactInternal.DefaultArtifactClient
-  >;
+  const mockedArtifactClient: artifactInternal.ArtifactClient = mock<artifact.ArtifactClient>();
 
   it("prints a debug message", () => {
     expect.assertions(1);
@@ -140,7 +133,7 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
 
     taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
       "123456789",
-      new MockedArtifactClient()
+      mockedArtifactClient
     );
 
     expect(infoSpy).toHaveBeenCalledWith(
@@ -157,7 +150,7 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
 
     taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
       "123456789",
-      new MockedArtifactClient()
+      mockedArtifactClient
     );
 
     expect(spy).toHaveBeenCalledWith("123456789", "taskcat_outputs/");
@@ -174,7 +167,7 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
 
     taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
       "123456789",
-      new MockedArtifactClient()
+      mockedArtifactClient
     );
 
     expect(spy).toHaveBeenCalledWith(
