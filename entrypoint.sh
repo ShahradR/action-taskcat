@@ -8,4 +8,4 @@ if [ "${INPUT_UPDATE_CFN_LINT}" == "true" ]; then
     pip install --upgrade cfn-lint
 fi
 
-taskcat $@ --minimal-output
+taskcat $@
