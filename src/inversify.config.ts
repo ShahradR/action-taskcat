@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Container } from "inversify";
+import { Container, decorate, injectable } from "inversify";
 import { TYPES } from "./types";
 import {
   TaskcatArtifactManager,
@@ -28,6 +28,8 @@ prodContainer.bind<Core>(TYPES.Core).toConstantValue(core);
 prodContainer.bind<ChildProcess>(TYPES.ChildProcess).toConstantValue(cp);
 
 prodContainer.bind<PostEntrypoint>(TYPES.PostEntrypoint).to(PostEntrypointImpl);
+
+decorate(injectable(), DefaultArtifactClient)
 
 prodContainer.bind<ArtifactClient>(TYPES.ArtifactClient).to(DefaultArtifactClient);
 

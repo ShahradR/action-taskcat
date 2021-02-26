@@ -1,7 +1,7 @@
 import { injectable, inject } from "inversify";
-import { TaskcatArtifactManager } from "./interfaces";
+import { ArtifactClient, TaskcatArtifactManager } from "./interfaces";
+import { TYPES } from "./types";
 import { ReplaceInFileConfig, sync } from "replace-in-file";
-import * as artifact from "@actions/artifact";
 import { glob } from "glob";
 import * as core from "@actions/core";
 
@@ -10,18 +10,22 @@ import * as core from "@actions/core";
  */
 @injectable()
 class TaskcatArtifactManagerImpl implements TaskcatArtifactManager {
+  private _artifactClient: ArtifactClient;
+
+  public constructor(
+    @inject(TYPES.ArtifactClient) artifactClient: ArtifactClient
+  ) {
+    this._artifactClient = artifactClient;
+  }
+
   /**
    * Mask the AWS account ID from the log files generated in the taskcat_outputs
    * directory, and publish them as a GitHub artifact.
    */
-  public maskAndPublishTaskcatArtifacts(
-    awsAccountId: string,
-    artifactClient: artifact.ArtifactClient
-  ): void {
+  public maskAndPublishTaskcatArtifacts(awsAccountId: string): void {
     core.info("Entered the maskAndPublishTaskcatArtifacts function");
     this.maskAccountId(awsAccountId, "taskcat_outputs/");
     this.publishTaskcatOutputs(
-      artifactClient,
       process.env.GITHUB_WORKSPACE + "/taskcat_outputs/"
     );
   }
@@ -53,13 +57,14 @@ class TaskcatArtifactManagerImpl implements TaskcatArtifactManager {
    *
    * @param filePath - the file path to the `taskcat_outputs` directory
    */
-  public publishTaskcatOutputs(
-    artifactClient: artifact.ArtifactClient,
-    filePath: string
-  ): void {
+  public publishTaskcatOutputs(filePath: string): void {
     const taskcatLogs: string[] = glob.sync(filePath + "*");
 
-    artifactClient.uploadArtifact("taskcat_outputs", taskcatLogs, filePath);
+    this._artifactClient.uploadArtifact(
+      "taskcat_outputs",
+      taskcatLogs,
+      filePath
+    );
   }
 }
 

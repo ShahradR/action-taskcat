@@ -98,10 +98,7 @@ describe("the publishTaskcatOutputs function", () => {
 
     const spy = jest.spyOn(uploadArtifact, "uploadArtifact");
 
-    taskcatArtifactManager.publishTaskcatOutputs(
-      uploadArtifact,
-      "taskcat_outputs/"
-    );
+    taskcatArtifactManager.publishTaskcatOutputs("taskcat_outputs/");
 
     expect(spy).toHaveBeenCalledWith(
       "taskcat_outputs",
@@ -112,9 +109,6 @@ describe("the publishTaskcatOutputs function", () => {
 });
 
 describe("the maskAndPublishTaskcatArtifacts function", () => {
-  jest.mock("@actions/artifact");
-  jest.mock("@actions/artifact/lib/internal/artifact-client");
-
   const taskcatArtifactManager: TaskcatArtifactManager = prodContainer.get<TaskcatArtifactManager>(
     TYPES.TaskcatArtifactManager
   );
@@ -131,10 +125,7 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
       .spyOn(taskcatArtifactManager, "publishTaskcatOutputs")
       .mockReturnValue();
 
-    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
-      "123456789",
-      mockedArtifactClient
-    );
+    taskcatArtifactManager.maskAndPublishTaskcatArtifacts("123456789");
 
     expect(infoSpy).toHaveBeenCalledWith(
       "Entered the maskAndPublishTaskcatArtifacts function"
@@ -148,10 +139,7 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
       .spyOn(taskcatArtifactManager, "maskAccountId")
       .mockReturnValue();
 
-    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
-      "123456789",
-      mockedArtifactClient
-    );
+    taskcatArtifactManager.maskAndPublishTaskcatArtifacts("123456789");
 
     expect(spy).toHaveBeenCalledWith("123456789", "taskcat_outputs/");
   });
@@ -159,20 +147,18 @@ describe("the maskAndPublishTaskcatArtifacts function", () => {
   it("calls the publishTaskcatOutputs function", () => {
     expect.assertions(1);
 
+    process.env = Object.assign(process.env, {
+      GITHUB_WORKSPACE: "/github/workspace",
+    });
+
     jest.spyOn(taskcatArtifactManager, "maskAccountId").mockReturnValue();
 
     const spy = jest
       .spyOn(taskcatArtifactManager, "publishTaskcatOutputs")
       .mockReturnValue();
 
-    taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
-      "123456789",
-      mockedArtifactClient
-    );
+    taskcatArtifactManager.maskAndPublishTaskcatArtifacts("123456789");
 
-    expect(spy).toHaveBeenCalledWith(
-      expect.anything(),
-      "/github/workspace/taskcat_outputs/"
-    );
+    expect(spy).toHaveBeenCalledWith("/github/workspace/taskcat_outputs/");
   });
 });
