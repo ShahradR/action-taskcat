@@ -5,6 +5,7 @@ const TYPES = {
   PostEntrypoint: Symbol.for("PostEntrypoint"),
   ChildProcess: Symbol.for("ChildProcess"),
   ArtifactClient: Symbol.for("ArtifactClient"),
+  ReplaceInFile: Symbol.for("ReplaceInFile"),
 };
 
 export { TYPES };
