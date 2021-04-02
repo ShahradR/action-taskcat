@@ -16,7 +16,7 @@ To use this action, configure your workflow and repository to ensure that:
    - This action also masks the AWS account ID in the job output, which can help mitigate certain security issues (see [Managing credentials](#managing-credentials) below)
 3. The `ShahradR/action-taskcat` action is called to run taskcat
    - The `command` input includes the `taskcat` command to run, including a call to the application itself. To see a full list of commands made available by taskcat, run `taskcat --help`
-   - (Optional) The `update_taskcat` and `update_cfn_lint` input parameters can be optionally defined. If they are set to `true`, the action will update taskcat and [cfn-lint](cfn-lint) before running your tests, respectively. Otherwise, the versions made available in the [`taskcat/taskcat:latest`](taskcat-container) Docker container will be used instead
+   - (Optional) The `update_taskcat` and `update_cfn_lint` input parameters can be optionally defined. If they're set to `true`, the action will update taskcat and [cfn-lint](cfn-lint) before running your tests, respectively. Otherwise, the versions made available in the [`taskcat/taskcat:latest`](taskcat-container) Docker container will be used instead
 4. (Optional) The [`actions/upload-artifact` action][upload-artifact] is used to output the `taskcat_outputs` files as artifacts
    - The account ID mask doesn't apply to the `taskcat_outputs` logs—there is a potential risk of exposing the AWS account IDs if they're used by (see [Managing credentials](#managing-credentials) below).
 
