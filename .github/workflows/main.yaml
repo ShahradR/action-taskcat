@@ -106,18 +106,6 @@ jobs:
           update_taskcat: true
           update_cfn_lint: true
 
-  vale:
-    name: Run Vale
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: errata-ai/vale-action@v1.3.0
-        with:
-          debug: true
-          files: '[ "README.md", "vale/README.md", "src/", "e2e/", "docs/", "__tests__/" ]'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   e2e-v1-default:
     name: End-to-end tests - @v1 - default
     runs-on: ubuntu-latest
@@ -134,6 +122,18 @@ jobs:
         uses: ShahradR/action-taskcat@v1
         with:
           commands: test run --project-root ./e2e/resources/default
+
+  vale:
+    name: Run Vale
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: errata-ai/vale-action@v1.3.0
+        with:
+          debug: true
+          files: '[ "README.md", "vale/README.md", "src/", "e2e/", "docs/", "__tests__/" ]'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     name: Create release
