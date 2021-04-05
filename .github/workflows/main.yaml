@@ -119,7 +119,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ca-central-1
       - name: Invoke "taskcat test run"
-        uses: ShahradR/action-taskcat@v1
+        uses: ShahradR/action-taskcat@v1.3.6
         with:
           commands: test run --project-root ./e2e/resources/default
 
