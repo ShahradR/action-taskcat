@@ -123,6 +123,43 @@ jobs:
         with:
           commands: test run --project-root ./e2e/resources/default
 
+  e2e-v1-update:
+    name: End-to-end tests - @v1 - update taskcat
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ca-central-1
+      - name: Invoke "taskcat test run"
+        uses: ShahradR/action-taskcat@v1
+        with:
+          commands: test run --project-root ./e2e/resources/default
+          update_taskcat: true
+
+  e2e-v1-lint-update:
+    name: End-to-end tests - @v1 - update taskcat
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ca-central-1
+      - name: Invoke "taskcat test run"
+        uses: ShahradR/action-taskcat@v1
+        with:
+          commands: test run --project-root ./e2e/resources/default
+          update_taskcat: true
+          update_cfn_lint: true
+
   vale:
     name: Run Vale
     runs-on: ubuntu-latest
@@ -146,9 +183,11 @@ jobs:
         e2e-update,
         e2e-lint-update,
         e2e-v1-default,
+        e2e-v1-update,
+        e2e-v1-lint-update,
         vale,
       ]
-    if: ${{ needs.pre-commit.result == 'success' && needs.tests.result == 'success' && needs.e2e-default.result == 'success' && needs.e2e-update.result == 'success' && needs.e2e-lint-update.result == 'success' && needs.e2e-v1-default.result == 'success' && needs.vale.result == 'success' }}
+    if: ${{ needs.pre-commit.result == 'success' && needs.tests.result == 'success' && needs.e2e-default.result == 'success' && needs.e2e-update.result == 'success' && needs.e2e-lint-update.result == 'success' && needs.e2e-v1-default.result == 'success' && needs.e2e-v1-update.result == 'success' && needs.e2e-v1-lint-update.result == 'success' && needs.vale.result == 'success' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
