@@ -1,6 +1,63 @@
+import { prodContainer } from "../src/inversify.config";
+import { Artifact, Core, ChildProcess } from "../src/interfaces";
+import * as cp from "child_process";
+import { mock, mockDeep, anyArray, anyObject } from "jest-mock-extended";
+import { PostEntrypointImpl } from "../src/post-entrypoint";
+import { TaskcatArtifactManagerImpl } from "../src/taskcat-artifact-manager";
+
 describe("the PostEntrypoint class", () => {
   describe("the main function", () => {
-    it.todo("should invoke taskcat");
+    it("should invoke taskcat", () => {
+      expect.assertions(1);
+
+      /**
+       * Mock the ChildProcess class. This is returned by child_process.spawn,
+       * and contains information about the running process itself, including
+       * the stdin, stdout, and stderr streams used to verify taskcat's output.
+       *
+       * This is different from the ChildProcess interface defined in
+       * src/interfaces.js we use throughout the application—that is a
+       * representation of the whole child_process Node.JS module, and exports
+       * this class. We mock the module itself below.
+       */
+      const cp = mockDeep<cp.ChildProcess>();
+
+      /**
+       * This mock represents the child_process module. We configure it to
+       * return the ChildProcess object created above when we call the "spawn"
+       * function. This will contain the streams we run our unit tests against.
+       */
+      const childProcessMock = mockDeep<ChildProcess>();
+      childProcessMock.spawn.mockReturnValue(cp);
+
+      /**
+       * Mock the "Core" object, and pass dummy values for the "commands" input
+       * parameter. In this case, a value of "test run" should invoke "taskcat
+       * test run"
+       */
+      const core = mockDeep<Core>();
+      core.getInput.mockReturnValue("test run");
+
+      // Invoke the PostEntrypointImpl.run() function with our mock values.
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      /**
+       * Verify that taskcat has been invoked. Note that we use matchers
+       * to ensure that some array or object has been passed. Other tests will
+       * be responsible for verifying the validity of the args and options
+       * parameters.
+       */
+      expect(childProcessMock.spawn).toHaveBeenCalledWith(
+        "taskcat",
+        anyArray(),
+        anyObject()
+      );
+    });
     it.todo(
       "should mark the run as failed if taskcat returns with a non-zero exit code"
     );
