@@ -30,9 +30,11 @@ prodContainer.bind<ChildProcess>(TYPES.ChildProcess).toConstantValue(cp);
 
 prodContainer.bind<PostEntrypoint>(TYPES.PostEntrypoint).to(PostEntrypointImpl);
 
-decorate(injectable(), DefaultArtifactClient)
+decorate(injectable(), DefaultArtifactClient);
 
-prodContainer.bind<ArtifactClient>(TYPES.ArtifactClient).to(DefaultArtifactClient);
+prodContainer
+  .bind<ArtifactClient>(TYPES.ArtifactClient)
+  .to(DefaultArtifactClient);
 
 prodContainer.bind(TYPES.ReplaceInFile).toFunction(sync);
 
