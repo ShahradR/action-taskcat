@@ -49,10 +49,7 @@ export class PostEntrypointImpl implements PostEntrypoint {
     });
 
     child.on("exit", (exitCode) => {
-      this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
-        awsAccountId,
-        this._artifact.create()
-      );
+      this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId);
 
       if (exitCode !== 0) {
         this._core.setFailed("The taskcat test did not complete successfully.");
