@@ -23,7 +23,20 @@ inputs:
       parameter is set by the aws-actions/configure-aws-credentials GitHub
       action.
     required: true
+  update_taskcat:
+    description: |
+      If set to "true", this action will update taskcat its the latest version
+      before running tests.
+    required: false
+  update_cfn_lint:
+    description: |
+      If set to "true", this action will update cfn-lit to its latest version
+      before running tests.
+    required: false
 
 runs:
   using: docker
   image: Dockerfile
+  args:
+    - ${{ inputs.commands }}
+  post-entrypoint: /dist/index.js

@@ -16,12 +16,15 @@ To use this action, configure your workflow and repository to ensure that:
    - This action also masks the AWS account ID in the job output, which can help mitigate certain security issues (see [Managing credentials](#managing-credentials) below)
 3. The `ShahradR/action-taskcat` action is called to run taskcat
    - The `command` input includes the `taskcat` command to run, including a call to the application itself. To see a full list of commands made available by taskcat, run `taskcat --help`
+   - (Optional) The `update_taskcat` and `update_cfn_lint` input parameters can be optionally defined. If they're set to `true`, the action will update taskcat and [cfn-lint](cfn-lint) before running your tests, respectively. Otherwise, the versions made available in the [`taskcat/taskcat:latest`](taskcat-container) Docker container will be used instead
 4. (Optional) The [`actions/upload-artifact` action][upload-artifact] is used to output the `taskcat_outputs` files as artifacts
    - The account ID mask doesn't apply to the `taskcat_outputs` logs—there is a potential risk of exposing the AWS account IDs if they're used by (see [Managing credentials](#managing-credentials) below).
 
 ### Example: Running `taskcat test run`
 
 In this scenario, is ran `taskcat test run` against the CloudFormation templates. The YAML file below should be saved in the `.github/workflow/` directory in (the YAML file itself can be given any name).
+
+The `update_taskcat` and `update_cfn_lint` input parameters are also defined, making sure that the action uses the latest releases for the two utilities before running the tests.
 
 The repository is also configured with two secrets—the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are used by the `aws-actions/configure-aws-credentials` action to authenticate against AWS, and make that information available to this action.
 
@@ -49,6 +52,8 @@ jobs:
         uses: ShahradR/action-taskcat@v1
         with:
           commands: test run
+          update_taskcat: true
+          update_cfn_lint: true
 ```
 
 ## Managing credentials
@@ -72,5 +77,7 @@ If you believe your outputs are safe to publish, you can store the `taskcat_outp
 [taskcat]: https://github.com/aws-quickstart/taskcat
 [s3-logging-repo]: https://github.com/ShahradR/s3-logging/
 [configure-aws-credentials]: https://github.com/aws-actions/configure-aws-credentials
+[cfn-lint]: https://github.com/aws-cloudformation/cfn-python-lint
+[taskcat-container]: https://hub.docker.com/r/taskcat/taskcat
 [upload-artifact]: https://github.com/actions/upload-artifact
 [rhino-sec-labs-iam-account-id]: https://rhinosecuritylabs.com/aws/aws-iam-user-enumeration/
