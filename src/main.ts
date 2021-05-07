@@ -1,4 +1,4 @@
-import { PostEntrypoint, TaskcatArtifactManager, Artifact } from "./interfaces";
+import { PostEntrypoint } from "./interfaces";
 import { TYPES } from "./types";
 import { prodContainer } from "./inversify.config";
 
