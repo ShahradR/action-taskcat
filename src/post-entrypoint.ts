@@ -28,7 +28,7 @@ export class PostEntrypointImpl implements PostEntrypoint {
     this._taskcatArtifactManager = taskcatArtifactManager;
   }
 
-  public run() {
+  public run(): void {
     const awsAccountId = this._core.getInput("aws-account-id");
     const taskcatCommands = this._core.getInput("commands");
     this._core.info("Received commands: " + taskcatCommands);
