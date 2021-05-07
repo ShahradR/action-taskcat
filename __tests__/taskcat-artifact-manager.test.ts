@@ -1,5 +1,5 @@
+import "reflect-metadata";
 import { ArtifactClient } from "../src/interfaces";
-import { prodContainer } from "../src/inversify.config";
 import { readFileSync, writeFileSync } from "fs";
 import { sync } from "glob";
 import * as replaceInFile from "replace-in-file";

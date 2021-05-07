@@ -1,4 +1,4 @@
-import { prodContainer } from "../src/inversify.config";
+import "reflect-metadata";
 import { Artifact, Core, ChildProcess } from "../src/interfaces";
 import * as cp from "child_process";
 import { mock, mockDeep, anyArray, anyObject } from "jest-mock-extended";
