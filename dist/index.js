@@ -1,6 +1,5 @@
 #! /usr/bin/node
 
-module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
@@ -1881,6 +1880,7 @@ exports.getInput = getInput;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setOutput(name, value) {
+    process.stdout.write(os.EOL);
     command_1.issueCommand('set-output', { name }, value);
 }
 exports.setOutput = setOutput;
@@ -2577,7 +2577,9 @@ class HttpClient {
                 maxSockets: maxSockets,
                 keepAlive: this._keepAlive,
                 proxy: {
-                    proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`,
+                    ...((proxyUrl.username || proxyUrl.password) && {
+                        proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`
+                    }),
                     host: proxyUrl.hostname,
                     port: proxyUrl.port
                 }
@@ -5388,8 +5390,6 @@ exports.realpath = function realpath(p, cache, cb) {
 /***/ 7625:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-exports.alphasort = alphasort
-exports.alphasorti = alphasorti
 exports.setopts = setopts
 exports.ownProp = ownProp
 exports.makeAbs = makeAbs
@@ -5407,12 +5407,8 @@ var minimatch = __nccwpck_require__(3973)
 var isAbsolute = __nccwpck_require__(8714)
 var Minimatch = minimatch.Minimatch
 
-function alphasorti (a, b) {
-  return a.toLowerCase().localeCompare(b.toLowerCase())
-}
-
 function alphasort (a, b) {
-  return a.localeCompare(b)
+  return a.localeCompare(b, 'en')
 }
 
 function setupIgnores (self, options) {
@@ -5540,7 +5536,7 @@ function finish (self) {
     all = Object.keys(all)
 
   if (!self.nosort)
-    all = all.sort(self.nocase ? alphasorti : alphasort)
+    all = all.sort(alphasort)
 
   // at *some* point we statted all of these
   if (self.mark) {
@@ -5688,8 +5684,6 @@ var assert = __nccwpck_require__(2357)
 var isAbsolute = __nccwpck_require__(8714)
 var globSync = __nccwpck_require__(9010)
 var common = __nccwpck_require__(7625)
-var alphasort = common.alphasort
-var alphasorti = common.alphasorti
 var setopts = common.setopts
 var ownProp = common.ownProp
 var inflight = __nccwpck_require__(2492)
@@ -6445,8 +6439,6 @@ var path = __nccwpck_require__(5622)
 var assert = __nccwpck_require__(2357)
 var isAbsolute = __nccwpck_require__(8714)
 var common = __nccwpck_require__(7625)
-var alphasort = common.alphasort
-var alphasorti = common.alphasorti
 var setopts = common.setopts
 var ownProp = common.ownProp
 var childrenIgnored = common.childrenIgnored
@@ -7096,7 +7088,7 @@ function decorate(decorator, target, parameterIndex) {
     }
 }
 exports.decorate = decorate;
-
+//# sourceMappingURL=decorator_utils.js.map
 
 /***/ }),
 
@@ -7136,7 +7128,7 @@ function inject(serviceIdentifier) {
     };
 }
 exports.inject = inject;
-
+//# sourceMappingURL=inject.js.map
 
 /***/ }),
 
@@ -7160,7 +7152,7 @@ function injectable() {
     };
 }
 exports.injectable = injectable;
-
+//# sourceMappingURL=injectable.js.map
 
 /***/ }),
 
@@ -7186,7 +7178,7 @@ function multiInject(serviceIdentifier) {
     };
 }
 exports.multiInject = multiInject;
-
+//# sourceMappingURL=multi_inject.js.map
 
 /***/ }),
 
@@ -7212,7 +7204,7 @@ function named(name) {
     };
 }
 exports.named = named;
-
+//# sourceMappingURL=named.js.map
 
 /***/ }),
 
@@ -7238,7 +7230,7 @@ function optional() {
     };
 }
 exports.optional = optional;
-
+//# sourceMappingURL=optional.js.map
 
 /***/ }),
 
@@ -7262,7 +7254,7 @@ function postConstruct() {
     };
 }
 exports.postConstruct = postConstruct;
-
+//# sourceMappingURL=post_construct.js.map
 
 /***/ }),
 
@@ -7287,7 +7279,7 @@ function tagged(metadataKey, metadataValue) {
     };
 }
 exports.tagged = tagged;
-
+//# sourceMappingURL=tagged.js.map
 
 /***/ }),
 
@@ -7308,7 +7300,7 @@ function targetName(name) {
     };
 }
 exports.targetName = targetName;
-
+//# sourceMappingURL=target_name.js.map
 
 /***/ }),
 
@@ -7329,7 +7321,7 @@ function unmanaged() {
     };
 }
 exports.unmanaged = unmanaged;
-
+//# sourceMappingURL=unmanaged.js.map
 
 /***/ }),
 
@@ -7359,7 +7351,7 @@ var Binding = (function () {
     }
     Binding.prototype.clone = function () {
         var clone = new Binding(this.serviceIdentifier, this.scope);
-        clone.activated = false;
+        clone.activated = (clone.scope === literal_types_1.BindingScopeEnum.Singleton) ? this.activated : false;
         clone.implementationType = this.implementationType;
         clone.dynamicValue = this.dynamicValue;
         clone.scope = this.scope;
@@ -7374,7 +7366,7 @@ var Binding = (function () {
     return Binding;
 }());
 exports.Binding = Binding;
-
+//# sourceMappingURL=binding.js.map
 
 /***/ }),
 
@@ -7391,7 +7383,7 @@ var BindingCount = {
     OnlyOneBindingAvailable: 1
 };
 exports.BindingCount = BindingCount;
-
+//# sourceMappingURL=binding_count.js.map
 
 /***/ }),
 
@@ -7411,11 +7403,12 @@ exports.CANNOT_UNBIND = "Could not unbind serviceIdentifier:";
 exports.NOT_REGISTERED = "No matching bindings found for serviceIdentifier:";
 exports.MISSING_INJECTABLE_ANNOTATION = "Missing required @injectable annotation in:";
 exports.MISSING_INJECT_ANNOTATION = "Missing required @inject or @multiInject annotation in:";
-exports.UNDEFINED_INJECT_ANNOTATION = function (name) {
+var UNDEFINED_INJECT_ANNOTATION = function (name) {
     return "@inject called with undefined this could mean that the class " + name + " has " +
         "a circular dependency problem. You can use a LazyServiceIdentifer to  " +
         "overcome this limitation.";
 };
+exports.UNDEFINED_INJECT_ANNOTATION = UNDEFINED_INJECT_ANNOTATION;
 exports.CIRCULAR_DEPENDENCY = "Circular dependency found:";
 exports.NOT_IMPLEMENTED = "Sorry, this feature is not fully implemented yet.";
 exports.INVALID_BINDING_TYPE = "Invalid binding type:";
@@ -7426,7 +7419,7 @@ exports.INVALID_TO_SELF_VALUE = "The toSelf function can only be applied when a 
     "used as service identifier";
 exports.INVALID_DECORATOR_OPERATION = "The @inject @multiInject @tagged and @named decorators " +
     "must be applied to the parameters of a class constructor or a class property.";
-exports.ARGUMENTS_LENGTH_MISMATCH = function () {
+var ARGUMENTS_LENGTH_MISMATCH = function () {
     var values = [];
     for (var _i = 0; _i < arguments.length; _i++) {
         values[_i] = arguments[_i];
@@ -7434,6 +7427,7 @@ exports.ARGUMENTS_LENGTH_MISMATCH = function () {
     return "The number of constructor arguments in the derived class " +
         (values[0] + " must be >= than the number of constructor arguments of its base class.");
 };
+exports.ARGUMENTS_LENGTH_MISMATCH = ARGUMENTS_LENGTH_MISMATCH;
 exports.CONTAINER_OPTIONS_MUST_BE_AN_OBJECT = "Invalid Container constructor argument. Container options " +
     "must be an object.";
 exports.CONTAINER_OPTIONS_INVALID_DEFAULT_SCOPE = "Invalid Container option. Default scope must " +
@@ -7443,14 +7437,15 @@ exports.CONTAINER_OPTIONS_INVALID_AUTO_BIND_INJECTABLE = "Invalid Container opti
 exports.CONTAINER_OPTIONS_INVALID_SKIP_BASE_CHECK = "Invalid Container option. Skip base check must " +
     "be a boolean";
 exports.MULTIPLE_POST_CONSTRUCT_METHODS = "Cannot apply @postConstruct decorator multiple times in the same class";
-exports.POST_CONSTRUCT_ERROR = function () {
+var POST_CONSTRUCT_ERROR = function () {
     var values = [];
     for (var _i = 0; _i < arguments.length; _i++) {
         values[_i] = arguments[_i];
     }
     return "@postConstruct error in class " + values[0] + ": " + values[1];
 };
-exports.CIRCULAR_DEPENDENCY_IN_FACTORY = function () {
+exports.POST_CONSTRUCT_ERROR = POST_CONSTRUCT_ERROR;
+var CIRCULAR_DEPENDENCY_IN_FACTORY = function () {
     var values = [];
     for (var _i = 0; _i < arguments.length; _i++) {
         values[_i] = arguments[_i];
@@ -7459,8 +7454,9 @@ exports.CIRCULAR_DEPENDENCY_IN_FACTORY = function () {
         ("in one of the '" + values[0] + "' bindings. Please investigate bindings with") +
         ("service identifier '" + values[1] + "'.");
 };
+exports.CIRCULAR_DEPENDENCY_IN_FACTORY = CIRCULAR_DEPENDENCY_IN_FACTORY;
 exports.STACK_OVERFLOW = "Maximum call stack size exceeded";
-
+//# sourceMappingURL=error_msgs.js.map
 
 /***/ }),
 
@@ -7494,7 +7490,7 @@ var TargetTypeEnum = {
     Variable: "Variable"
 };
 exports.TargetTypeEnum = TargetTypeEnum;
-
+//# sourceMappingURL=literal_types.js.map
 
 /***/ }),
 
@@ -7504,7 +7500,7 @@ exports.TargetTypeEnum = TargetTypeEnum;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.POST_CONSTRUCT = exports.DESIGN_PARAM_TYPES = exports.PARAM_TYPES = exports.TAGGED_PROP = exports.TAGGED = exports.MULTI_INJECT_TAG = exports.INJECT_TAG = exports.OPTIONAL_TAG = exports.UNMANAGED_TAG = exports.NAME_TAG = exports.NAMED_TAG = void 0;
+exports.NON_CUSTOM_TAG_KEYS = exports.POST_CONSTRUCT = exports.DESIGN_PARAM_TYPES = exports.PARAM_TYPES = exports.TAGGED_PROP = exports.TAGGED = exports.MULTI_INJECT_TAG = exports.INJECT_TAG = exports.OPTIONAL_TAG = exports.UNMANAGED_TAG = exports.NAME_TAG = exports.NAMED_TAG = void 0;
 exports.NAMED_TAG = "named";
 exports.NAME_TAG = "name";
 exports.UNMANAGED_TAG = "unmanaged";
@@ -7516,7 +7512,18 @@ exports.TAGGED_PROP = "inversify:tagged_props";
 exports.PARAM_TYPES = "inversify:paramtypes";
 exports.DESIGN_PARAM_TYPES = "design:paramtypes";
 exports.POST_CONSTRUCT = "post_construct";
-
+function getNonCustomTagKeys() {
+    return [
+        exports.INJECT_TAG,
+        exports.MULTI_INJECT_TAG,
+        exports.NAME_TAG,
+        exports.UNMANAGED_TAG,
+        exports.NAMED_TAG,
+        exports.OPTIONAL_TAG,
+    ];
+}
+exports.NON_CUSTOM_TAG_KEYS = getNonCustomTagKeys();
+//# sourceMappingURL=metadata_keys.js.map
 
 /***/ }),
 
@@ -7561,6 +7568,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Container = void 0;
 var binding_1 = __nccwpck_require__(6945);
@@ -7577,6 +7589,7 @@ var container_snapshot_1 = __nccwpck_require__(293);
 var lookup_1 = __nccwpck_require__(9888);
 var Container = (function () {
     function Container(containerOptions) {
+        this._appliedMiddleware = [];
         var options = containerOptions || {};
         if (typeof options !== "object") {
             throw new Error("" + ERROR_MSGS.CONTAINER_OPTIONS_MUST_BE_AN_OBJECT);
@@ -7614,10 +7627,13 @@ var Container = (function () {
         this._metadataReader = new metadata_reader_1.MetadataReader();
     }
     Container.merge = function (container1, container2) {
+        var container3 = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            container3[_i - 2] = arguments[_i];
+        }
         var container = new Container();
+        var targetContainers = __spreadArray([container1, container2], container3).map(function (targetContainer) { return planner_1.getBindingDictionary(targetContainer); });
         var bindingDictionary = planner_1.getBindingDictionary(container);
-        var bindingDictionary1 = planner_1.getBindingDictionary(container1);
-        var bindingDictionary2 = planner_1.getBindingDictionary(container2);
         function copyDictionary(origin, destination) {
             origin.traverse(function (key, value) {
                 value.forEach(function (binding) {
@@ -7625,8 +7641,9 @@ var Container = (function () {
                 });
             });
         }
-        copyDictionary(bindingDictionary1, bindingDictionary);
-        copyDictionary(bindingDictionary2, bindingDictionary);
+        targetContainers.forEach(function (targetBindingDictionary) {
+            copyDictionary(targetBindingDictionary, bindingDictionary);
+        });
         return container;
     };
     Container.prototype.load = function () {
@@ -7748,6 +7765,7 @@ var Container = (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             middlewares[_i] = arguments[_i];
         }
+        this._appliedMiddleware = this._appliedMiddleware.concat(middlewares);
         var initial = (this._middleware) ? this._middleware : this._planAndResolve();
         this._middleware = middlewares.reduce(function (prev, curr) { return curr(prev); }, initial);
     };
@@ -7775,6 +7793,9 @@ var Container = (function () {
     Container.prototype.resolve = function (constructorFunction) {
         var tempContainer = this.createChild();
         tempContainer.bind(constructorFunction).toSelf();
+        this._appliedMiddleware.forEach(function (m) {
+            tempContainer.applyMiddleware(m);
+        });
         return tempContainer.get(constructorFunction);
     };
     Container.prototype._getContainerModuleHelpersFactory = function () {
@@ -7851,7 +7872,7 @@ var Container = (function () {
     return Container;
 }());
 exports.Container = Container;
-
+//# sourceMappingURL=container.js.map
 
 /***/ }),
 
@@ -7879,7 +7900,7 @@ var AsyncContainerModule = (function () {
     return AsyncContainerModule;
 }());
 exports.AsyncContainerModule = AsyncContainerModule;
-
+//# sourceMappingURL=container_module.js.map
 
 /***/ }),
 
@@ -7902,7 +7923,7 @@ var ContainerSnapshot = (function () {
     return ContainerSnapshot;
 }());
 exports.ContainerSnapshot = ContainerSnapshot;
-
+//# sourceMappingURL=container_snapshot.js.map
 
 /***/ }),
 
@@ -7990,7 +8011,7 @@ var Lookup = (function () {
     return Lookup;
 }());
 exports.Lookup = Lookup;
-
+//# sourceMappingURL=lookup.js.map
 
 /***/ }),
 
@@ -7998,55 +8019,56 @@ exports.Lookup = Lookup;
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
+var __webpack_unused_export__;
 
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.METADATA_KEY = void 0;
+__webpack_unused_export__ = ({ value: true });
+__webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = exports.GW = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = exports.f3 = __webpack_unused_export__ = __webpack_unused_export__ = exports.b2 = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = exports.W2 = __webpack_unused_export__ = void 0;
 var keys = __nccwpck_require__(9146);
-exports.METADATA_KEY = keys;
+__webpack_unused_export__ = keys;
 var container_1 = __nccwpck_require__(5430);
-Object.defineProperty(exports, "Container", ({ enumerable: true, get: function () { return container_1.Container; } }));
+Object.defineProperty(exports, "W2", ({ enumerable: true, get: function () { return container_1.Container; } }));
 var literal_types_1 = __nccwpck_require__(2294);
-Object.defineProperty(exports, "BindingScopeEnum", ({ enumerable: true, get: function () { return literal_types_1.BindingScopeEnum; } }));
-Object.defineProperty(exports, "BindingTypeEnum", ({ enumerable: true, get: function () { return literal_types_1.BindingTypeEnum; } }));
-Object.defineProperty(exports, "TargetTypeEnum", ({ enumerable: true, get: function () { return literal_types_1.TargetTypeEnum; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return literal_types_1.BindingScopeEnum; } });
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return literal_types_1.BindingTypeEnum; } });
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return literal_types_1.TargetTypeEnum; } });
 var container_module_1 = __nccwpck_require__(8631);
-Object.defineProperty(exports, "AsyncContainerModule", ({ enumerable: true, get: function () { return container_module_1.AsyncContainerModule; } }));
-Object.defineProperty(exports, "ContainerModule", ({ enumerable: true, get: function () { return container_module_1.ContainerModule; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return container_module_1.AsyncContainerModule; } });
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return container_module_1.ContainerModule; } });
 var injectable_1 = __nccwpck_require__(5954);
-Object.defineProperty(exports, "injectable", ({ enumerable: true, get: function () { return injectable_1.injectable; } }));
+Object.defineProperty(exports, "b2", ({ enumerable: true, get: function () { return injectable_1.injectable; } }));
 var tagged_1 = __nccwpck_require__(6956);
-Object.defineProperty(exports, "tagged", ({ enumerable: true, get: function () { return tagged_1.tagged; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return tagged_1.tagged; } });
 var named_1 = __nccwpck_require__(4206);
-Object.defineProperty(exports, "named", ({ enumerable: true, get: function () { return named_1.named; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return named_1.named; } });
 var inject_1 = __nccwpck_require__(5466);
-Object.defineProperty(exports, "inject", ({ enumerable: true, get: function () { return inject_1.inject; } }));
-Object.defineProperty(exports, "LazyServiceIdentifer", ({ enumerable: true, get: function () { return inject_1.LazyServiceIdentifer; } }));
+Object.defineProperty(exports, "f3", ({ enumerable: true, get: function () { return inject_1.inject; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return inject_1.LazyServiceIdentifer; } });
 var optional_1 = __nccwpck_require__(5815);
-Object.defineProperty(exports, "optional", ({ enumerable: true, get: function () { return optional_1.optional; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return optional_1.optional; } });
 var unmanaged_1 = __nccwpck_require__(8183);
-Object.defineProperty(exports, "unmanaged", ({ enumerable: true, get: function () { return unmanaged_1.unmanaged; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return unmanaged_1.unmanaged; } });
 var multi_inject_1 = __nccwpck_require__(3110);
-Object.defineProperty(exports, "multiInject", ({ enumerable: true, get: function () { return multi_inject_1.multiInject; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return multi_inject_1.multiInject; } });
 var target_name_1 = __nccwpck_require__(2147);
-Object.defineProperty(exports, "targetName", ({ enumerable: true, get: function () { return target_name_1.targetName; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return target_name_1.targetName; } });
 var post_construct_1 = __nccwpck_require__(1001);
-Object.defineProperty(exports, "postConstruct", ({ enumerable: true, get: function () { return post_construct_1.postConstruct; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return post_construct_1.postConstruct; } });
 var metadata_reader_1 = __nccwpck_require__(45);
-Object.defineProperty(exports, "MetadataReader", ({ enumerable: true, get: function () { return metadata_reader_1.MetadataReader; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return metadata_reader_1.MetadataReader; } });
 var id_1 = __nccwpck_require__(2198);
-Object.defineProperty(exports, "id", ({ enumerable: true, get: function () { return id_1.id; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return id_1.id; } });
 var decorator_utils_1 = __nccwpck_require__(8357);
-Object.defineProperty(exports, "decorate", ({ enumerable: true, get: function () { return decorator_utils_1.decorate; } }));
+Object.defineProperty(exports, "GW", ({ enumerable: true, get: function () { return decorator_utils_1.decorate; } }));
 var constraint_helpers_1 = __nccwpck_require__(6319);
-Object.defineProperty(exports, "traverseAncerstors", ({ enumerable: true, get: function () { return constraint_helpers_1.traverseAncerstors; } }));
-Object.defineProperty(exports, "taggedConstraint", ({ enumerable: true, get: function () { return constraint_helpers_1.taggedConstraint; } }));
-Object.defineProperty(exports, "namedConstraint", ({ enumerable: true, get: function () { return constraint_helpers_1.namedConstraint; } }));
-Object.defineProperty(exports, "typeConstraint", ({ enumerable: true, get: function () { return constraint_helpers_1.typeConstraint; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return constraint_helpers_1.traverseAncerstors; } });
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return constraint_helpers_1.taggedConstraint; } });
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return constraint_helpers_1.namedConstraint; } });
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return constraint_helpers_1.typeConstraint; } });
 var serialization_1 = __nccwpck_require__(3742);
-Object.defineProperty(exports, "getServiceIdentifierAsString", ({ enumerable: true, get: function () { return serialization_1.getServiceIdentifierAsString; } }));
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return serialization_1.getServiceIdentifierAsString; } });
 var binding_utils_1 = __nccwpck_require__(5315);
-Object.defineProperty(exports, "multiBindToService", ({ enumerable: true, get: function () { return binding_utils_1.multiBindToService; } }));
-
+__webpack_unused_export__ = ({ enumerable: true, get: function () { return binding_utils_1.multiBindToService; } });
+//# sourceMappingURL=inversify.js.map
 
 /***/ }),
 
@@ -8072,7 +8094,7 @@ var Context = (function () {
     return Context;
 }());
 exports.Context = Context;
-
+//# sourceMappingURL=context.js.map
 
 /***/ }),
 
@@ -8100,7 +8122,7 @@ var Metadata = (function () {
     return Metadata;
 }());
 exports.Metadata = Metadata;
-
+//# sourceMappingURL=metadata.js.map
 
 /***/ }),
 
@@ -8130,7 +8152,7 @@ var MetadataReader = (function () {
     return MetadataReader;
 }());
 exports.MetadataReader = MetadataReader;
-
+//# sourceMappingURL=metadata_reader.js.map
 
 /***/ }),
 
@@ -8149,7 +8171,7 @@ var Plan = (function () {
     return Plan;
 }());
 exports.Plan = Plan;
-
+//# sourceMappingURL=plan.js.map
 
 /***/ }),
 
@@ -8313,7 +8335,7 @@ function createMockRequest(container, serviceIdentifier, key, value) {
     return request;
 }
 exports.createMockRequest = createMockRequest;
-
+//# sourceMappingURL=planner.js.map
 
 /***/ }),
 
@@ -8349,7 +8371,7 @@ var QueryableString = (function () {
     return QueryableString;
 }());
 exports.QueryableString = QueryableString;
-
+//# sourceMappingURL=queryable_string.js.map
 
 /***/ }),
 
@@ -8358,12 +8380,10 @@ exports.QueryableString = QueryableString;
 
 "use strict";
 
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getFunctionName = exports.getBaseClassDependencyCount = exports.getDependencies = void 0;
@@ -8390,10 +8410,11 @@ function getTargets(metadataReader, constructorName, func, isBaseClass) {
     var constructorArgsMetadata = metadata.userGeneratedMetadata;
     var keys = Object.keys(constructorArgsMetadata);
     var hasUserDeclaredUnknownInjections = (func.length === 0 && keys.length > 0);
-    var iterations = (hasUserDeclaredUnknownInjections) ? keys.length : func.length;
+    var hasOptionalParameters = keys.length > func.length;
+    var iterations = (hasUserDeclaredUnknownInjections || hasOptionalParameters) ? keys.length : func.length;
     var constructorTargets = getConstructorArgsAsTargets(isBaseClass, constructorName, serviceIdentifiers, constructorArgsMetadata, iterations);
     var propertyTargets = getClassPropsAsTargets(metadataReader, func);
-    var targets = __spreadArrays(constructorTargets, propertyTargets);
+    var targets = __spreadArray(__spreadArray([], constructorTargets), propertyTargets);
     return targets;
 }
 function getConstructorArgsAsTarget(index, isBaseClass, constructorName, serviceIdentifiers, constructorArgsMetadata) {
@@ -8449,7 +8470,7 @@ function getClassPropsAsTargets(metadataReader, constructorFunc) {
     var baseConstructor = Object.getPrototypeOf(constructorFunc.prototype).constructor;
     if (baseConstructor !== Object) {
         var baseTargets = getClassPropsAsTargets(metadataReader, baseConstructor);
-        targets = __spreadArrays(targets, baseTargets);
+        targets = __spreadArray(__spreadArray([], targets), baseTargets);
     }
     return targets;
 }
@@ -8489,7 +8510,7 @@ function formatTargetMetadata(targetMetadata) {
         unmanaged: targetMetadataMap[METADATA_KEY.UNMANAGED_TAG]
     };
 }
-
+//# sourceMappingURL=reflection_utils.js.map
 
 /***/ }),
 
@@ -8522,7 +8543,7 @@ var Request = (function () {
     return Request;
 }());
 exports.Request = Request;
-
+//# sourceMappingURL=request.js.map
 
 /***/ }),
 
@@ -8574,13 +8595,7 @@ var Target = (function () {
         return this.hasTag(METADATA_KEY.NAMED_TAG);
     };
     Target.prototype.isTagged = function () {
-        return this.metadata.some(function (m) {
-            return (m.key !== METADATA_KEY.INJECT_TAG) &&
-                (m.key !== METADATA_KEY.MULTI_INJECT_TAG) &&
-                (m.key !== METADATA_KEY.NAME_TAG) &&
-                (m.key !== METADATA_KEY.UNMANAGED_TAG) &&
-                (m.key !== METADATA_KEY.NAMED_TAG);
-        });
+        return this.metadata.some(function (metadata) { return METADATA_KEY.NON_CUSTOM_TAG_KEYS.every(function (key) { return metadata.key !== key; }); });
     };
     Target.prototype.isOptional = function () {
         return this.matchesTag(METADATA_KEY.OPTIONAL_TAG)(true);
@@ -8593,15 +8608,11 @@ var Target = (function () {
     };
     Target.prototype.getCustomTags = function () {
         if (this.isTagged()) {
-            return this.metadata.filter(function (m) {
-                return (m.key !== METADATA_KEY.INJECT_TAG) &&
-                    (m.key !== METADATA_KEY.MULTI_INJECT_TAG) &&
-                    (m.key !== METADATA_KEY.NAME_TAG) &&
-                    (m.key !== METADATA_KEY.UNMANAGED_TAG) &&
-                    (m.key !== METADATA_KEY.NAMED_TAG);
-            });
+            return this.metadata.filter(function (metadata) { return METADATA_KEY.NON_CUSTOM_TAG_KEYS.every(function (key) { return metadata.key !== key; }); });
         }
-        return null;
+        else {
+            return null;
+        }
     };
     Target.prototype.matchesNamedTag = function (name) {
         return this.matchesTag(METADATA_KEY.NAMED_TAG)(name);
@@ -8621,7 +8632,7 @@ var Target = (function () {
     return Target;
 }());
 exports.Target = Target;
-
+//# sourceMappingURL=target.js.map
 
 /***/ }),
 
@@ -8630,12 +8641,10 @@ exports.Target = Target;
 
 "use strict";
 
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveInstance = void 0;
@@ -8657,7 +8666,7 @@ function _injectProperties(instance, childRequests, resolveRequest) {
     return instance;
 }
 function _createInstance(Func, injections) {
-    return new (Func.bind.apply(Func, __spreadArrays([void 0], injections)))();
+    return new (Func.bind.apply(Func, __spreadArray([void 0], injections)))();
 }
 function _postConstruct(constr, result) {
     if (Reflect.hasMetadata(METADATA_KEY.POST_CONSTRUCT, constr)) {
@@ -8687,7 +8696,7 @@ function resolveInstance(constr, childRequests, resolveRequest) {
     return result;
 }
 exports.resolveInstance = resolveInstance;
-
+//# sourceMappingURL=instantiation.js.map
 
 /***/ }),
 
@@ -8750,9 +8759,11 @@ var _resolveRequest = function (requestScope) {
             }
             if (binding_1.type === literal_types_1.BindingTypeEnum.ConstantValue) {
                 result = binding_1.cache;
+                binding_1.activated = true;
             }
             else if (binding_1.type === literal_types_1.BindingTypeEnum.Function) {
                 result = binding_1.cache;
+                binding_1.activated = true;
             }
             else if (binding_1.type === literal_types_1.BindingTypeEnum.Constructor) {
                 result = binding_1.implementationType;
@@ -8794,7 +8805,7 @@ function resolve(context) {
     return _f(context.plan.rootRequest);
 }
 exports.resolve = resolve;
-
+//# sourceMappingURL=resolver.js.map
 
 /***/ }),
 
@@ -8826,7 +8837,7 @@ var BindingInSyntax = (function () {
     return BindingInSyntax;
 }());
 exports.BindingInSyntax = BindingInSyntax;
-
+//# sourceMappingURL=binding_in_syntax.js.map
 
 /***/ }),
 
@@ -8907,7 +8918,7 @@ var BindingInWhenOnSyntax = (function () {
     return BindingInWhenOnSyntax;
 }());
 exports.BindingInWhenOnSyntax = BindingInWhenOnSyntax;
-
+//# sourceMappingURL=binding_in_when_on_syntax.js.map
 
 /***/ }),
 
@@ -8930,7 +8941,7 @@ var BindingOnSyntax = (function () {
     return BindingOnSyntax;
 }());
 exports.BindingOnSyntax = BindingOnSyntax;
-
+//# sourceMappingURL=binding_on_syntax.js.map
 
 /***/ }),
 
@@ -8966,6 +8977,7 @@ var BindingToSyntax = (function () {
         this._binding.cache = value;
         this._binding.dynamicValue = null;
         this._binding.implementationType = null;
+        this._binding.scope = literal_types_1.BindingScopeEnum.Singleton;
         return new binding_when_on_syntax_1.BindingWhenOnSyntax(this._binding);
     };
     BindingToSyntax.prototype.toDynamicValue = function (func) {
@@ -8978,11 +8990,13 @@ var BindingToSyntax = (function () {
     BindingToSyntax.prototype.toConstructor = function (constructor) {
         this._binding.type = literal_types_1.BindingTypeEnum.Constructor;
         this._binding.implementationType = constructor;
+        this._binding.scope = literal_types_1.BindingScopeEnum.Singleton;
         return new binding_when_on_syntax_1.BindingWhenOnSyntax(this._binding);
     };
     BindingToSyntax.prototype.toFactory = function (factory) {
         this._binding.type = literal_types_1.BindingTypeEnum.Factory;
         this._binding.factory = factory;
+        this._binding.scope = literal_types_1.BindingScopeEnum.Singleton;
         return new binding_when_on_syntax_1.BindingWhenOnSyntax(this._binding);
     };
     BindingToSyntax.prototype.toFunction = function (func) {
@@ -8991,6 +9005,7 @@ var BindingToSyntax = (function () {
         }
         var bindingWhenOnSyntax = this.toConstantValue(func);
         this._binding.type = literal_types_1.BindingTypeEnum.Function;
+        this._binding.scope = literal_types_1.BindingScopeEnum.Singleton;
         return bindingWhenOnSyntax;
     };
     BindingToSyntax.prototype.toAutoFactory = function (serviceIdentifier) {
@@ -8999,11 +9014,13 @@ var BindingToSyntax = (function () {
             var autofactory = function () { return context.container.get(serviceIdentifier); };
             return autofactory;
         };
+        this._binding.scope = literal_types_1.BindingScopeEnum.Singleton;
         return new binding_when_on_syntax_1.BindingWhenOnSyntax(this._binding);
     };
     BindingToSyntax.prototype.toProvider = function (provider) {
         this._binding.type = literal_types_1.BindingTypeEnum.Provider;
         this._binding.provider = provider;
+        this._binding.scope = literal_types_1.BindingScopeEnum.Singleton;
         return new binding_when_on_syntax_1.BindingWhenOnSyntax(this._binding);
     };
     BindingToSyntax.prototype.toService = function (service) {
@@ -9012,7 +9029,7 @@ var BindingToSyntax = (function () {
     return BindingToSyntax;
 }());
 exports.BindingToSyntax = BindingToSyntax;
-
+//# sourceMappingURL=binding_to_syntax.js.map
 
 /***/ }),
 
@@ -9082,7 +9099,7 @@ var BindingWhenOnSyntax = (function () {
     return BindingWhenOnSyntax;
 }());
 exports.BindingWhenOnSyntax = BindingWhenOnSyntax;
-
+//# sourceMappingURL=binding_when_on_syntax.js.map
 
 /***/ }),
 
@@ -9189,7 +9206,7 @@ var BindingWhenSyntax = (function () {
     return BindingWhenSyntax;
 }());
 exports.BindingWhenSyntax = BindingWhenSyntax;
-
+//# sourceMappingURL=binding_when_syntax.js.map
 
 /***/ }),
 
@@ -9238,7 +9255,7 @@ var typeConstraint = function (type) { return function (request) {
     return false;
 }; };
 exports.typeConstraint = typeConstraint;
-
+//# sourceMappingURL=constraint_helpers.js.map
 
 /***/ }),
 
@@ -9249,7 +9266,7 @@ exports.typeConstraint = typeConstraint;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.multiBindToService = void 0;
-exports.multiBindToService = function (container) {
+var multiBindToService = function (container) {
     return function (service) {
         return function () {
             var types = [];
@@ -9260,7 +9277,8 @@ exports.multiBindToService = function (container) {
         };
     };
 };
-
+exports.multiBindToService = multiBindToService;
+//# sourceMappingURL=binding_utils.js.map
 
 /***/ }),
 
@@ -9277,7 +9295,7 @@ function isStackOverflowExeption(error) {
         error.message === ERROR_MSGS.STACK_OVERFLOW);
 }
 exports.isStackOverflowExeption = isStackOverflowExeption;
-
+//# sourceMappingURL=exceptions.js.map
 
 /***/ }),
 
@@ -9293,7 +9311,7 @@ function id() {
     return idCounter++;
 }
 exports.id = id;
-
+//# sourceMappingURL=id.js.map
 
 /***/ }),
 
@@ -9405,7 +9423,7 @@ function getFunctionName(v) {
     }
 }
 exports.getFunctionName = getFunctionName;
-
+//# sourceMappingURL=serialization.js.map
 
 /***/ }),
 
@@ -11963,7 +11981,7 @@ function replaceInFile(config, cb) {
     config = parseConfig(config);
   }
   catch (error) {
-    if (cb) {
+    if (typeof cb === 'function') {
       return cb(error, null);
     }
     return Promise.reject(error);
@@ -11988,7 +12006,7 @@ function replaceInFile(config, cb) {
 
     //Success handler
     .then(results => {
-      if (cb) {
+      if (typeof cb === 'function') {
         cb(null, results);
       }
       return results;
@@ -11996,7 +12014,7 @@ function replaceInFile(config, cb) {
 
     //Error handler
     .catch(error => {
-      if (cb) {
+      if (typeof cb === 'function') {
         cb(error);
       }
       else {
@@ -13561,254 +13579,11 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 1202:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.prodContainer = void 0;
-__nccwpck_require__(9977);
-var inversify_1 = __nccwpck_require__(7771);
-var types_1 = __nccwpck_require__(8154);
-var taskcat_artifact_manager_1 = __nccwpck_require__(7794);
-var post_entrypoint_1 = __nccwpck_require__(703);
-var artifact = __importStar(__nccwpck_require__(2605));
-var core = __importStar(__nccwpck_require__(2186));
-var cp = __importStar(__nccwpck_require__(3129));
-var prodContainer = new inversify_1.Container();
-exports.prodContainer = prodContainer;
-prodContainer
-    .bind(types_1.TYPES.TaskcatArtifactManager)
-    .to(taskcat_artifact_manager_1.TaskcatArtifactManagerImpl);
-prodContainer.bind(types_1.TYPES.Artifact).toConstantValue(artifact);
-prodContainer.bind(types_1.TYPES.Core).toConstantValue(core);
-prodContainer.bind(types_1.TYPES.ChildProcess).toConstantValue(cp);
-prodContainer.bind(types_1.TYPES.PostEntrypoint).to(post_entrypoint_1.PostEntrypointImpl);
-
-
-/***/ }),
-
-/***/ 703:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PostEntrypointImpl = void 0;
-var types_1 = __nccwpck_require__(8154);
-var inversify_1 = __nccwpck_require__(7771);
-var PostEntrypointImpl = /** @class */ (function () {
-    function PostEntrypointImpl(artifact, core, cp, taskcatArtifactManager) {
-        this._artifact = artifact;
-        this._core = core;
-        this._cp = cp;
-        this._taskcatArtifactManager = taskcatArtifactManager;
-    }
-    PostEntrypointImpl.prototype.run = function () {
-        var _this = this;
-        var awsAccountId = this._core.getInput("aws-account-id");
-        var taskcatCommands = this._core.getInput("commands");
-        this._core.info("Received commands: " + taskcatCommands);
-        var newList = taskcatCommands.split(" ");
-        newList.push("--minimal-output");
-        var child = this._cp.spawn("taskcat", newList, {
-            stdio: ["ignore", "pipe", "pipe"],
-        });
-        child.stdout.setEncoding("utf-8");
-        child.stderr.setEncoding("utf-8");
-        child.stderr.pipe(process.stdout);
-        child.stdout.on("data", function (data) {
-            _this._core.info(data);
-        });
-        child.on("exit", function (exitCode) {
-            _this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId, _this._artifact.create());
-            if (exitCode !== 0) {
-                _this._core.setFailed("The taskcat test did not complete successfully.");
-            }
-        });
-    };
-    PostEntrypointImpl = __decorate([
-        inversify_1.injectable(),
-        __param(0, inversify_1.inject(types_1.TYPES.Artifact)),
-        __param(1, inversify_1.inject(types_1.TYPES.Core)),
-        __param(2, inversify_1.inject(types_1.TYPES.ChildProcess)),
-        __param(3, inversify_1.inject(types_1.TYPES.TaskcatArtifactManager)),
-        __metadata("design:paramtypes", [Object, Object, Object, Object])
-    ], PostEntrypointImpl);
-    return PostEntrypointImpl;
-}());
-exports.PostEntrypointImpl = PostEntrypointImpl;
-
-
-/***/ }),
-
-/***/ 7794:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TaskcatArtifactManagerImpl = void 0;
-var inversify_1 = __nccwpck_require__(7771);
-var replace_in_file_1 = __nccwpck_require__(5983);
-var glob_1 = __nccwpck_require__(1957);
-var core = __importStar(__nccwpck_require__(2186));
-/**
- * Manages the artifacts generated by the taskcat GitHub Action.
- */
-var TaskcatArtifactManagerImpl = /** @class */ (function () {
-    function TaskcatArtifactManagerImpl() {
-    }
-    /**
-     * Mask the AWS account ID from the log files generated in the taskcat_outputs
-     * directory, and publish them as a GitHub artifact.
-     */
-    TaskcatArtifactManagerImpl.prototype.maskAndPublishTaskcatArtifacts = function (awsAccountId, artifactClient) {
-        core.info("Entered the maskAndPublishTaskcatArtifacts function");
-        this.maskAccountId(awsAccountId, "taskcat_outputs/");
-        this.publishTaskcatOutputs(artifactClient, process.env.GITHUB_WORKSPACE + "/taskcat_outputs/");
-    };
-    /**
-     * Masks the AWS account ID from the taskcat_output logs.
-     *
-     * @throws {@link Error} Thrown if the AWS account ID is an empty string.
-     *
-     * @param awsAccountId - the AWS account ID to mask in the logs.
-     * @param filePath - the file path to the `taskcat_outputs` directory.
-     */
-    TaskcatArtifactManagerImpl.prototype.maskAccountId = function (awsAccountId, filePath) {
-        if (awsAccountId === "") {
-            throw new Error();
-        }
-        var replaceOptions = {
-            files: filePath,
-            from: awsAccountId,
-            to: "***",
-        };
-        replace_in_file_1.sync(replaceOptions);
-    };
-    /**
-     * Publish the taskcat output logs as a GitHub artifact
-     *
-     * @param filePath - the file path to the `taskcat_outputs` directory
-     */
-    TaskcatArtifactManagerImpl.prototype.publishTaskcatOutputs = function (artifactClient, filePath) {
-        var taskcatLogs = glob_1.glob.sync(filePath + "*");
-        artifactClient.uploadArtifact("taskcat_outputs", taskcatLogs, filePath);
-    };
-    TaskcatArtifactManagerImpl = __decorate([
-        inversify_1.injectable()
-    ], TaskcatArtifactManagerImpl);
-    return TaskcatArtifactManagerImpl;
-}());
-exports.TaskcatArtifactManagerImpl = TaskcatArtifactManagerImpl;
-
-
-/***/ }),
-
-/***/ 8154:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TYPES = void 0;
-var TYPES = {
-    TaskcatArtifactManager: Symbol.for("TaskcatArtifactManager"),
-    Artifact: Symbol.for("Artifact"),
-    Core: Symbol.for("Core"),
-    PostEntrypoint: Symbol.for("PostEntrypoint"),
-    ChildProcess: Symbol.for("ChildProcess")
-};
-exports.TYPES = TYPES;
-
-
-/***/ }),
-
-/***/ 399:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-var types_1 = __nccwpck_require__(8154);
-var inversify_config_1 = __nccwpck_require__(1202);
-var postEntrypoint = inversify_config_1.prodContainer.get(types_1.TYPES.PostEntrypoint);
-postEntrypoint.run();
-
-
-/***/ }),
-
 /***/ 2357:
 /***/ ((module) => {
 
 "use strict";
 module.exports = require("assert");;
-
-/***/ }),
-
-/***/ 3129:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("child_process");;
 
 /***/ }),
 
@@ -13940,8 +13715,9 @@ module.exports = require("zlib");;
 /******/ 	// The require function
 /******/ 	function __nccwpck_require__(moduleId) {
 /******/ 		// Check if module is in cache
-/******/ 		if(__webpack_module_cache__[moduleId]) {
-/******/ 			return __webpack_module_cache__[moduleId].exports;
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
 /******/ 		}
 /******/ 		// Create a new module (and put it into the cache)
 /******/ 		var module = __webpack_module_cache__[moduleId] = {
@@ -13967,6 +13743,17 @@ module.exports = require("zlib");;
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__nccwpck_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/node module decorator */
 /******/ 	(() => {
 /******/ 		__nccwpck_require__.nmd = (module) => {
@@ -13978,10 +13765,205 @@ module.exports = require("zlib");;
 /******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nccwpck_require__.ab = __dirname + "/";/************************************************************************/
-/******/ 	// module exports must be returned from runtime so entry inlining is disabled
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	return __nccwpck_require__(399);
+/******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";/************************************************************************/
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
+"use strict";
+// ESM COMPAT FLAG
+__nccwpck_require__.r(__webpack_exports__);
+
+;// CONCATENATED MODULE: ./src/types.ts
+var TYPES = {
+    TaskcatArtifactManager: Symbol.for("TaskcatArtifactManager"),
+    Artifact: Symbol.for("Artifact"),
+    Core: Symbol.for("Core"),
+    PostEntrypoint: Symbol.for("PostEntrypoint"),
+    ChildProcess: Symbol.for("ChildProcess"),
+    ArtifactClient: Symbol.for("ArtifactClient"),
+    ReplaceInFile: Symbol.for("ReplaceInFile"),
+};
+
+
+// EXTERNAL MODULE: ./node_modules/reflect-metadata/Reflect.js
+var reflect_metadata_Reflect = __nccwpck_require__(9977);
+// EXTERNAL MODULE: ./node_modules/inversify/lib/inversify.js
+var inversify = __nccwpck_require__(7771);
+// EXTERNAL MODULE: ./node_modules/glob/glob.js
+var glob = __nccwpck_require__(1957);
+// EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
+var core = __nccwpck_require__(2186);
+;// CONCATENATED MODULE: ./src/taskcat-artifact-manager.ts
+var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (undefined && undefined.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (undefined && undefined.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+
+
+
+
+/**
+ * Manages the artifacts generated by the taskcat GitHub Action.
+ */
+var TaskcatArtifactManagerImpl = /** @class */ (function () {
+    function TaskcatArtifactManagerImpl(artifactClient, sync) {
+        this._artifactClient = artifactClient;
+        this._sync = sync;
+    }
+    /**
+     * Mask the AWS account ID from the log files generated in the taskcat_outputs
+     * directory, and publish them as a GitHub artifact.
+     */
+    TaskcatArtifactManagerImpl.prototype.maskAndPublishTaskcatArtifacts = function (awsAccountId) {
+        core.info("Entered the maskAndPublishTaskcatArtifacts function");
+        this.maskAccountId(awsAccountId, "taskcat_outputs/");
+        this.publishTaskcatOutputs(process.env.GITHUB_WORKSPACE + "/taskcat_outputs/");
+    };
+    /**
+     * Masks the AWS account ID from the taskcat_output logs.
+     *
+     * @throws {@link Error} Thrown if the AWS account ID is an empty string.
+     *
+     * @param awsAccountId - the AWS account ID to mask in the logs.
+     * @param filePath - the file path to the `taskcat_outputs` directory.
+     */
+    TaskcatArtifactManagerImpl.prototype.maskAccountId = function (awsAccountId, filePath) {
+        if (awsAccountId === "") {
+            throw new Error();
+        }
+        var replaceOptions = {
+            files: filePath,
+            from: awsAccountId,
+            to: "***",
+        };
+        this._sync(replaceOptions);
+    };
+    /**
+     * Publish the taskcat output logs as a GitHub artifact
+     *
+     * @param filePath - the file path to the `taskcat_outputs` directory
+     */
+    TaskcatArtifactManagerImpl.prototype.publishTaskcatOutputs = function (filePath) {
+        var taskcatLogs = glob.glob.sync(filePath + "*");
+        this._artifactClient.uploadArtifact("taskcat_outputs", taskcatLogs, filePath);
+    };
+    TaskcatArtifactManagerImpl = __decorate([
+        (0,inversify/* injectable */.b2)(),
+        __param(0, (0,inversify/* inject */.f3)(TYPES.ArtifactClient)),
+        __param(1, (0,inversify/* inject */.f3)(TYPES.ReplaceInFile)),
+        __metadata("design:paramtypes", [Object, Object])
+    ], TaskcatArtifactManagerImpl);
+    return TaskcatArtifactManagerImpl;
+}());
+
+
+;// CONCATENATED MODULE: ./src/post-entrypoint.ts
+var post_entrypoint_decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var post_entrypoint_metadata = (undefined && undefined.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var post_entrypoint_param = (undefined && undefined.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+
+
+var PostEntrypointImpl = /** @class */ (function () {
+    function PostEntrypointImpl(artifact, core, cp, taskcatArtifactManager) {
+        this._artifact = artifact;
+        this._core = core;
+        this._cp = cp;
+        this._taskcatArtifactManager = taskcatArtifactManager;
+    }
+    PostEntrypointImpl.prototype.run = function () {
+        var _this = this;
+        var awsAccountId = this._core.getInput("aws-account-id");
+        var taskcatCommands = this._core.getInput("commands");
+        this._core.info("Received commands: " + taskcatCommands);
+        var newList = taskcatCommands.split(" ");
+        newList.push("--minimal-output");
+        var child = this._cp.spawn("taskcat", newList, {
+            stdio: ["ignore", "pipe", "pipe"],
+        });
+        child.stdout.setEncoding("utf-8");
+        child.stderr.setEncoding("utf-8");
+        child.stderr.pipe(process.stdout);
+        child.stdout.on("data", function (data) {
+            _this._core.info(data);
+        });
+        child.on("exit", function (exitCode) {
+            _this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId);
+            if (exitCode !== 0) {
+                _this._core.setFailed("The taskcat test did not complete successfully.");
+            }
+        });
+    };
+    PostEntrypointImpl = post_entrypoint_decorate([
+        (0,inversify/* injectable */.b2)(),
+        post_entrypoint_param(0, (0,inversify/* inject */.f3)(TYPES.Artifact)),
+        post_entrypoint_param(1, (0,inversify/* inject */.f3)(TYPES.Core)),
+        post_entrypoint_param(2, (0,inversify/* inject */.f3)(TYPES.ChildProcess)),
+        post_entrypoint_param(3, (0,inversify/* inject */.f3)(TYPES.TaskcatArtifactManager)),
+        post_entrypoint_metadata("design:paramtypes", [Object, Object, Object, Object])
+    ], PostEntrypointImpl);
+    return PostEntrypointImpl;
+}());
+
+
+// EXTERNAL MODULE: ./node_modules/@actions/artifact/lib/artifact-client.js
+var artifact_client = __nccwpck_require__(2605);
+;// CONCATENATED MODULE: external "child_process"
+const external_child_process_namespaceObject = require("child_process");;
+// EXTERNAL MODULE: ./node_modules/replace-in-file/index.js
+var replace_in_file = __nccwpck_require__(5983);
+// EXTERNAL MODULE: ./node_modules/@actions/artifact/lib/internal/artifact-client.js
+var internal_artifact_client = __nccwpck_require__(8802);
+;// CONCATENATED MODULE: ./src/inversify.config.ts
+
+
+
+
+
+
+
+
+
+
+var prodContainer = new inversify/* Container */.W2();
+prodContainer
+    .bind(TYPES.TaskcatArtifactManager)
+    .to(TaskcatArtifactManagerImpl);
+prodContainer.bind(TYPES.Artifact).toConstantValue(artifact_client);
+prodContainer.bind(TYPES.Core).toConstantValue(core);
+prodContainer.bind(TYPES.ChildProcess).toConstantValue(external_child_process_namespaceObject);
+prodContainer.bind(TYPES.PostEntrypoint).to(PostEntrypointImpl);
+(0,inversify/* decorate */.GW)((0,inversify/* injectable */.b2)(), internal_artifact_client.DefaultArtifactClient);
+prodContainer
+    .bind(TYPES.ArtifactClient)
+    .to(internal_artifact_client.DefaultArtifactClient);
+prodContainer.bind(TYPES.ReplaceInFile).toFunction(replace_in_file.sync);
+
+
+;// CONCATENATED MODULE: ./src/main.ts
+
+
+var postEntrypoint = prodContainer.get(TYPES.PostEntrypoint);
+postEntrypoint.run();
+
+})();
+
+module.exports = __webpack_exports__;
 /******/ })()
 ;
