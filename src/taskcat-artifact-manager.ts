@@ -1,7 +1,7 @@
 import { injectable, inject } from "inversify";
 import { ArtifactClient, TaskcatArtifactManager } from "./interfaces";
 import { TYPES } from "./types";
-import { ReplaceInFileConfig } from "replace-in-file";
+import { ReplaceInFileConfig, ReplaceResult } from "replace-in-file";
 import { glob } from "glob";
 import * as core from "@actions/core";
 
@@ -11,11 +11,12 @@ import * as core from "@actions/core";
 @injectable()
 class TaskcatArtifactManagerImpl implements TaskcatArtifactManager {
   private _artifactClient: ArtifactClient;
-  private _sync: any;
+  private _sync: (config: ReplaceInFileConfig) => ReplaceResult[];
 
   public constructor(
     @inject(TYPES.ArtifactClient) artifactClient: ArtifactClient,
-    @inject(TYPES.ReplaceInFile) sync: any
+    @inject(TYPES.ReplaceInFile)
+    sync: (config: ReplaceInFileConfig) => ReplaceResult[]
   ) {
     this._artifactClient = artifactClient;
     this._sync = sync;

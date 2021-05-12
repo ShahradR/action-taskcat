@@ -19,7 +19,7 @@ describe("the TaskcatArtifactManager class", () => {
     jest.clearAllMocks();
   });
 
-  const mockReplaceInFileSync = (replaceInFile.sync as unknown) as jest.SpiedFunction<
+  const mockReplaceInFileSync = (replaceInFile.sync as unknown) as jest.MockedFunction<
     typeof replaceInFile.sync
   >;
 

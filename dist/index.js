@@ -13859,7 +13859,7 @@ var TaskcatArtifactManagerImpl = /** @class */ (function () {
         (0,inversify/* injectable */.b2)(),
         __param(0, (0,inversify/* inject */.f3)(TYPES.ArtifactClient)),
         __param(1, (0,inversify/* inject */.f3)(TYPES.ReplaceInFile)),
-        __metadata("design:paramtypes", [Object, Object])
+        __metadata("design:paramtypes", [Object, Function])
     ], TaskcatArtifactManagerImpl);
     return TaskcatArtifactManagerImpl;
 }());
