@@ -11,13 +11,7 @@ jest.mock("fs");
 jest.mock("glob");
 
 describe("the TaskcatArtifactManager class", () => {
-  beforeAll(() => {
-    process.env.GITHUB_WORKSPACE = "/github/workspace";
-  });
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+  process.env.GITHUB_WORKSPACE = "/github/workspace";
 
   const mockReplaceInFileSync = (replaceInFile.sync as unknown) as jest.MockedFunction<
     typeof replaceInFile.sync
