@@ -199,7 +199,7 @@ describe("the TaskcatArtifactManager class", () => {
 
       taskcatArtifactManager.maskAndPublishTaskcatArtifacts("123456789");
 
-      expect(spy).toHaveBeenCalledWith("123456789", "taskcat_outputs/");
+      expect(spy).toHaveBeenCalledWith("123456789", "taskcat_outputs/*");
     });
 
     it("calls the publishTaskcatOutputs function", () => {

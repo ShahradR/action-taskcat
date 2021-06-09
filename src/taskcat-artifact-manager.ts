@@ -28,7 +28,7 @@ class TaskcatArtifactManagerImpl implements TaskcatArtifactManager {
    */
   public maskAndPublishTaskcatArtifacts(awsAccountId: string): void {
     core.info("Entered the maskAndPublishTaskcatArtifacts function");
-    this.maskAccountId(awsAccountId, "taskcat_outputs/");
+    this.maskAccountId(awsAccountId, "taskcat_outputs/*");
     this.publishTaskcatOutputs(
       process.env.GITHUB_WORKSPACE + "/taskcat_outputs/"
     );
