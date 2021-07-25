@@ -133,7 +133,19 @@ export class ChildProcessMock implements ChildProcess {
    * `PostEntrypoint` class.
    */
   on(event: string, listener: (...args: any[]) => void) {
-    listener();
+    if (event === "exit") listener(this.exitCode);
     return this;
+  }
+
+  /**
+   * Create a new ChildProcessMock instance, and specify the exit code that
+   * would have been returned by taskcat when the test is ran, depending on
+   * whether we want to test a success or failure scenario.
+   *
+   * @param exitCode The mock exit code that would have been returned by
+   * taskcat
+   */
+  public constructor(exitCode: number) {
+    this.exitCode = exitCode;
   }
 }
