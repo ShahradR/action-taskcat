@@ -54,7 +54,7 @@ type SendHandle = net.Socket | net.Server;
  */
 export class ChildProcessMock implements ChildProcess {
   stdin: Writable = mock<Writable>();
-  stdout: Readable = mock<Readable>();
+  stdout: Readable;
   stdio: [
     Writable | null,
     Readable | null,
@@ -71,7 +71,7 @@ export class ChildProcessMock implements ChildProcess {
     ]
   >();
 
-  stderr: Readable = mock<Readable>();
+  stderr: Readable;
   killed = false;
   connected = true;
   pid = 1234;
@@ -132,7 +132,7 @@ export class ChildProcessMock implements ChildProcess {
    * function. For the purposes of this application, these are set in the
    * `PostEntrypoint` class.
    */
-  on(event: string, listener: (...args: any[]) => void) {
+  on(event: string, listener: (...args: any[]) => void): ChildProcessMock {
     if (event === "exit") listener(this.exitCode);
     return this;
   }
@@ -142,10 +142,20 @@ export class ChildProcessMock implements ChildProcess {
    * would have been returned by taskcat when the test is ran, depending on
    * whether we want to test a success or failure scenario.
    *
-   * @param exitCode The mock exit code that would have been returned by
+   * @param exitCode - The mock exit code that would have been returned by
    * taskcat
+   *
+   * @param stdout - The stdout stream used by this process. A Readable
+   * object can be passed if verifying stdout behavior, or a mock one if the
+   * stream is not relevant to the test.
+   *
+   * @param stderr - The stderr stream used by this process. A Readable
+   * object can be passed if verifying stderr behavior, or a mock one if the
+   * stream is not relevant to the test.
    */
-  public constructor(exitCode: number) {
+  public constructor(exitCode: number, stdout: Readable, stderr: Readable) {
     this.exitCode = exitCode;
+    this.stdout = stdout;
+    this.stderr = stderr;
   }
 }

@@ -11,6 +11,7 @@ import {
 import { PostEntrypointImpl } from "../src/post-entrypoint";
 import { TaskcatArtifactManagerImpl } from "../src/taskcat-artifact-manager";
 import { ChildProcessMock } from "./mocks/childProcessMock";
+import { Readable } from "stream";
 
 describe("the PostEntrypoint class", () => {
   describe("the main function", () => {
@@ -69,7 +70,7 @@ describe("the PostEntrypoint class", () => {
     it("should mark the run as failed if taskcat returns with a non-zero exit code", () => {
       expect.assertions(2);
 
-      const cp = new ChildProcessMock(1);
+      const cp = new ChildProcessMock(1, mock<Readable>(), mock<Readable>());
       jest.spyOn(cp, "on");
 
       /**
@@ -105,7 +106,7 @@ describe("the PostEntrypoint class", () => {
     it("should mark the run as successful if taskcat returns with an exit code of 0", () => {
       expect.assertions(2);
 
-      const cp = new ChildProcessMock(0);
+      const cp = new ChildProcessMock(0, mock<Readable>(), mock<Readable>());
       jest.spyOn(cp, "on");
 
       /**
@@ -136,7 +137,51 @@ describe("the PostEntrypoint class", () => {
       expect(core.setFailed).not.toHaveBeenCalled();
     });
 
-    it.todo("should redirect standard and error outputs to the console");
+    it("should redirect standard and error outputs to the console", async () => {
+      expect.assertions(3);
+
+      // Create real Readable streams (versus the mocks created in other tests).
+      // We can simulate output from taskcat by pushing data to these streams.
+      const stdout = new Readable();
+      const stderr = new Readable();
+
+      const cp = new ChildProcessMock(0, stdout, stderr);
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockReturnValue(cp);
+
+      const core = mockDeep<Core>();
+      core.getInput.mockReturnValue("test run");
+
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      stdout.push("Output from stdout");
+      stdout.push(null);
+
+      stderr.push("Output from stderr");
+      stderr.push(null);
+
+      // Delay for 10 milliseconds, to give time for the code to receive and
+      // process the stdout and stderr data we just pushed.
+      await sleep(10);
+      expect(core.info).toHaveBeenNthCalledWith(
+        1,
+        "Received commands: test run"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(2, "Output from stdout");
+      expect(core.info).toHaveBeenNthCalledWith(3, "Output from stderr");
+
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+    });
     it.todo("should upload the taskcat reports as an artifact");
     it.todo("should mask the AWS account ID from the taskcat reports");
   });

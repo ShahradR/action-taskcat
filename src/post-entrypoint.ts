@@ -42,9 +42,12 @@ export class PostEntrypointImpl implements PostEntrypoint {
 
     child.stdout.setEncoding("utf-8");
     child.stderr.setEncoding("utf-8");
-    child.stderr.pipe(process.stdout);
 
     child.stdout.on("data", (data) => {
+      this._core.info(data);
+    });
+
+    child.stderr.on("data", (data) => {
       this._core.info(data);
     });
 
