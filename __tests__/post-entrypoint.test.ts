@@ -178,7 +178,7 @@ describe("the PostEntrypoint class", () => {
       expect(core.info).toHaveBeenNthCalledWith(2, "Output from stdout");
       expect(core.info).toHaveBeenNthCalledWith(3, "Output from stderr");
 
-      function sleep(ms) {
+      function sleep(ms: number) {
         return new Promise((resolve) => setTimeout(resolve, ms));
       }
     });
