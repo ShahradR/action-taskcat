@@ -1,7 +1,20 @@
 {
-  "presets": ["@babel/env", "@babel/preset-typescript"],
+  "presets": [
+    "@babel/env",
+    ["@babel/preset-typescript", { "onlyRemoveTypeImports": true }]
+  ],
   "plugins": [
-    "@babel/proposal-class-properties",
-    "@babel/proposal-object-rest-spread"
+    ["@babel/plugin-proposal-decorators", { "legacy": true }],
+    ["@babel/proposal-class-properties", { "loose": true }],
+    ["@babel/plugin-proposal-private-methods", { "loose": true }],
+    ["@babel/plugin-proposal-private-property-in-object", { "loose": true }],
+    "babel-plugin-parameter-decorator",
+    "@babel/proposal-object-rest-spread",
+    [
+      "@babel/plugin-transform-runtime",
+      {
+        "regenerator": true
+      }
+    ]
   ]
 }

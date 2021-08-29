@@ -17,3 +17,4 @@ jobs:
         uses: ./../../../
         with:
           commands: "--help"
+          aws-account-id: "123456789"
