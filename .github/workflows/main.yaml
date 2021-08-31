@@ -69,7 +69,6 @@ jobs:
         uses: ./
         with:
           commands: test run --project-root ./e2e/resources/default
-          aws-account-id: ${{ steps.aws-credentials.outputs.aws-account-id }}
 
   e2e-update:
     name: End-to-end tests - update taskcat
