@@ -182,7 +182,56 @@ describe("the PostEntrypoint class", () => {
         return new Promise((resolve) => setTimeout(resolve, ms));
       }
     });
-    it.todo("should upload the taskcat reports as an artifact");
-    it.todo("should mask the AWS account ID from the taskcat reports");
+    it("should not invoke taskcat with the --minimal-output flag", () => {
+      expect.assertions(1);
+
+      /**
+       * Mock the ChildProcess class. This is returned by child_process.spawn,
+       * and contains information about the running process itself, including
+       * the stdin, stdout, and stderr streams used to verify taskcat's output.
+       *
+       * This is different from the ChildProcess interface defined in
+       * src/interfaces.js we use throughout the application—that is a
+       * representation of the whole child_process Node.JS module, and exports
+       * this class. We mock the module itself below.
+       */
+      const cp = mockDeep<cp.ChildProcess>();
+
+      /**
+       * This mock represents the child_process module. We configure it to
+       * return the ChildProcess object created above when we call the "spawn"
+       * function. This will contain the streams we run our unit tests against.
+       */
+      const childProcessMock = mockDeep<ChildProcess>();
+      childProcessMock.spawn.mockReturnValue(cp);
+
+      /**
+       * Mock the "Core" object, and pass dummy values for the "commands" input
+       * parameter. In this case, a value of "test run" should invoke "taskcat
+       * test run"
+       */
+      const core = mockDeep<Core>();
+      core.getInput.mockReturnValue("test run");
+
+      // Invoke the PostEntrypointImpl.run() function with our mock values.
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      /**
+       * Verify that taskcat has been invoked. Note that we use matchers
+       * to ensure that some array or object has been passed. Other tests will
+       * be responsible for verifying the validity of the args and options
+       * parameters.
+       */
+      expect(childProcessMock.spawn).not.toHaveBeenCalledWith(
+        "taskcat",
+        expect.arrayContaining(["--minimal-output"]),
+        anyObject()
+      );
+    });
   });
 });

@@ -34,7 +34,6 @@ export class PostEntrypointImpl implements PostEntrypoint {
     this._core.info("Received commands: " + taskcatCommands);
 
     const newList = taskcatCommands.split(" ");
-    newList.push("--minimal-output");
 
     const child = this._cp.spawn("taskcat", newList, {
       stdio: ["ignore", "pipe", "pipe"],
