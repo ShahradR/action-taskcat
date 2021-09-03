@@ -10,7 +10,7 @@
   "dependencies": {
     "@actions/artifact": "^0.5.2",
     "@actions/core": "^1.5.0",
-    "@babel/runtime": "^7.15.3",
+    "@babel/runtime": "^7.15.4",
     "inversify": "^5.1.1",
     "reflect-metadata": "^0.1.13",
     "replace-in-file": "^6.2.0"
