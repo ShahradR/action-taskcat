@@ -41,7 +41,7 @@ describe("integration tests", () => {
             --directory ./e2e/resources/default/`
           )
           .toString();
-      } catch (error) {
+      } catch (error: any) {
         actOutput = error.stdout.toString();
         exitCode = error.status;
       }
