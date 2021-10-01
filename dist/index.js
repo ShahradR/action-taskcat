@@ -1,3 +1,5 @@
+#! /usr/bin/node
+
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
@@ -13867,7 +13869,21 @@ var PostEntrypointImpl = /** @class */ (function () {
         var _this = this;
         var awsAccountId = this._core.getInput("aws-account-id");
         var taskcatCommands = this._core.getInput("commands");
+        var updateTaskcat = this._core.getBooleanInput("update_taskcat");
         this._core.info("Received commands: " + taskcatCommands);
+        if (updateTaskcat) {
+            var updateTaskcatChild = this._cp.spawn("pip", ["install", "--upgrade", "taskcat"], {
+                stdio: ["ignore", "pipe", "pipe"],
+            });
+            updateTaskcatChild.stdout.setEncoding("utf-8");
+            updateTaskcatChild.stderr.setEncoding("utf-8");
+            updateTaskcatChild.stdout.on("data", function (data) {
+                _this._core.info(data);
+            });
+            updateTaskcatChild.stderr.on("data", function (data) {
+                _this._core.info(data);
+            });
+        }
         var newList = taskcatCommands.split(" ");
         var child = this._cp.spawn("taskcat", newList, {
             stdio: ["ignore", "pipe", "pipe"],
