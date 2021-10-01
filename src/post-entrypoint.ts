@@ -31,7 +31,29 @@ export class PostEntrypointImpl implements PostEntrypoint {
   public run(): void {
     const awsAccountId = this._core.getInput("aws-account-id");
     const taskcatCommands = this._core.getInput("commands");
+    const updateTaskcat: boolean = this._core.getBooleanInput("update_taskcat");
     this._core.info("Received commands: " + taskcatCommands);
+
+    if (updateTaskcat) {
+      const updateTaskcatChild = this._cp.spawn(
+        "pip",
+        ["install", "--upgrade", "taskcat"],
+        {
+          stdio: ["ignore", "pipe", "pipe"],
+        }
+      );
+
+      updateTaskcatChild.stdout.setEncoding("utf-8");
+      updateTaskcatChild.stderr.setEncoding("utf-8");
+
+      updateTaskcatChild.stdout.on("data", (data) => {
+        this._core.info(data);
+      });
+
+      updateTaskcatChild.stderr.on("data", (data) => {
+        this._core.info(data);
+      });
+    }
 
     const newList = taskcatCommands.split(" ");
 
