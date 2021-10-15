@@ -780,5 +780,356 @@ describe("the PostEntrypoint class", () => {
         return new Promise((resolve) => setTimeout(resolve, ms));
       }
     });
+
+    it("should set the update_cfn_lint input parameter as optional", async () => {
+      expect.assertions(3);
+
+      // Create real Readable streams (versus the mocks created in other tests).
+      // We can simulate output from taskcat by pushing data to these streams.
+      const pipTaskcatStdout = new Readable();
+      const pipTaskcatStderr = new Readable();
+
+      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipTaskcatStdout,
+        pipTaskcatStderr
+      );
+
+      const pipCfnLintStdout = new Readable();
+      const pipCfnLintStderr = new Readable();
+
+      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipCfnLintStdout,
+        pipCfnLintStderr
+      );
+
+      const taskcatStdout = new Readable();
+      const taskcatStderr = new Readable();
+
+      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        taskcatStdout,
+        taskcatStderr
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip") {
+            if (args.includes("taskcat")) return pipTaskcatCp;
+            else if (args.includes("cfn_lint")) return pipCfnLintCp;
+            else throw Error("pip was invoked for neither taskcat or cfn_lint");
+          } else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
+      const core = mockDeep<Core>();
+      core.getInput.mockImplementation(
+        (name: string, options?: InputOptions | undefined): string => {
+          if (name === "commands") return "test run";
+          else if (name === "aws-account-id") return "123456789";
+          else if (name === "update_cfn_lint") return "";
+          else if (name === "update_taskcat") return "false";
+          else throw new Error();
+        }
+      );
+      core.getBooleanInput.mockImplementation(
+        (name: string, options?: InputOptions | undefined): boolean => {
+          if (name === "update_cfn_lint") throw new TypeError();
+          else return false;
+        }
+      );
+
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout");
+      pipCfnLintStdout.push(null);
+
+      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr");
+      pipCfnLintStderr.push(null);
+
+      pipTaskcatStdout.push("Output from the pip taskcat update stdout");
+      pipTaskcatStdout.push(null);
+
+      pipTaskcatStderr.push("Output from the pip taskcat update stderr");
+      pipTaskcatStderr.push(null);
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      taskcatStdout.push("Output from taskcat's stdout");
+      taskcatStdout.push(null);
+
+      taskcatStderr.push("Output from taskcat's stderr");
+      taskcatStderr.push(null);
+
+      // Delay for 10 milliseconds, to give time for the code to receive and
+      // process the stdout and stderr data we just pushed.
+      await sleep(10);
+      expect(core.info).toHaveBeenNthCalledWith(
+        1,
+        "Received commands: test run"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        2,
+        "Output from taskcat's stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        3,
+        "Output from taskcat's stderr"
+      );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+    });
+
+    it("should throw an exception if the update_cfn_lint input parameter is not a boolean value", async () => {
+      expect.assertions(1);
+
+      /**
+       * Mock the ChildProcess class. This is returned by child_process.spawn,
+       * and contains information about the running process itself, including
+       * the stdin, stdout, and stderr streams used to verify taskcat's output.
+       *
+       * This is different from the ChildProcess interface defined in
+       * src/interfaces.js we use throughout the application—that is a
+       * representation of the whole child_process Node.JS module, and exports
+       * this class. We mock the module itself below.
+       */
+      const cp = mockDeep<cp.ChildProcess>();
+
+      /**
+       * This mock represents the child_process module. We configure it to
+       * return the ChildProcess object created above when we call the "spawn"
+       * function. This will contain the streams we run our unit tests against.
+       */
+      const childProcessMock = mockDeep<ChildProcess>();
+      childProcessMock.spawn.mockReturnValue(cp);
+
+      /**
+       * Mock the "Core" object, and pass dummy values for the "commands" input
+       * parameter. In this case, a value of "test run" should invoke "taskcat
+       * test run"
+       */
+      const core = mockDeep<Core>();
+      core.getInput.mockImplementation(
+        (name: string, options?: InputOptions | undefined): string => {
+          if (name === "commands") return "test run";
+          else if (name === "aws-account-id") return "123456789";
+          else if (name === "update_cfn_lint") return "test";
+          else if (name === "update_taskcat") return "false";
+          else throw new Error();
+        }
+      );
+      core.getBooleanInput.mockImplementation(
+        (name: string, options?: InputOptions | undefined): boolean => {
+          if (name === "update_cfn_lint")
+            throw new TypeError(
+              'Input does not meet YAML 1.2 "Core Schema" specification: update_cfn_lint\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
+            );
+          else return false;
+        }
+      );
+
+      expect(() => {
+        new PostEntrypointImpl(
+          mock<Artifact>(),
+          core,
+          childProcessMock,
+          mock<TaskcatArtifactManagerImpl>()
+        ).run();
+      }).toThrow(
+        'Input does not meet YAML 1.2 "Core Schema" specification: update_cfn_lint\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
+      );
+    });
+
+    it("should set the update_taskcat input parameter as optional", async () => {
+      expect.assertions(3);
+
+      // Create real Readable streams (versus the mocks created in other tests).
+      // We can simulate output from taskcat by pushing data to these streams.
+      const pipTaskcatStdout = new Readable();
+      const pipTaskcatStderr = new Readable();
+
+      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipTaskcatStdout,
+        pipTaskcatStderr
+      );
+
+      const pipCfnLintStdout = new Readable();
+      const pipCfnLintStderr = new Readable();
+
+      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipCfnLintStdout,
+        pipCfnLintStderr
+      );
+
+      const taskcatStdout = new Readable();
+      const taskcatStderr = new Readable();
+
+      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        taskcatStdout,
+        taskcatStderr
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip") {
+            if (args.includes("taskcat")) return pipTaskcatCp;
+            else if (args.includes("cfn_lint")) return pipCfnLintCp;
+            else throw Error("pip was invoked for neither taskcat or cfn_lint");
+          } else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
+      const core = mockDeep<Core>();
+      core.getInput.mockImplementation(
+        (name: string, options?: InputOptions | undefined): string => {
+          if (name === "commands") return "test run";
+          else if (name === "aws-account-id") return "123456789";
+          else if (name === "update_cfn_lint") return "false";
+          else if (name === "update_taskcat") return "";
+          else throw new Error();
+        }
+      );
+      core.getBooleanInput.mockImplementation(
+        (name: string, options?: InputOptions | undefined): boolean => {
+          if (name === "update_taskcat")
+            throw new TypeError(
+              'Input does not meet YAML 1.2 "Core Schema" specification: update_taskcat\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
+            );
+          else return false;
+        }
+      );
+
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout");
+      pipCfnLintStdout.push(null);
+
+      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr");
+      pipCfnLintStderr.push(null);
+
+      pipTaskcatStdout.push("Output from the pip taskcat update stdout");
+      pipTaskcatStdout.push(null);
+
+      pipTaskcatStderr.push("Output from the pip taskcat update stderr");
+      pipTaskcatStderr.push(null);
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      taskcatStdout.push("Output from taskcat's stdout");
+      taskcatStdout.push(null);
+
+      taskcatStderr.push("Output from taskcat's stderr");
+      taskcatStderr.push(null);
+
+      // Delay for 10 milliseconds, to give time for the code to receive and
+      // process the stdout and stderr data we just pushed.
+      await sleep(10);
+      expect(core.info).toHaveBeenNthCalledWith(
+        1,
+        "Received commands: test run"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        2,
+        "Output from taskcat's stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        3,
+        "Output from taskcat's stderr"
+      );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+    });
+
+    it("should throw an exception if the update_taskcat input parameter is not a boolean value", async () => {
+      expect.assertions(1);
+
+      /**
+       * Mock the ChildProcess class. This is returned by child_process.spawn,
+       * and contains information about the running process itself, including
+       * the stdin, stdout, and stderr streams used to verify taskcat's output.
+       *
+       * This is different from the ChildProcess interface defined in
+       * src/interfaces.js we use throughout the application—that is a
+       * representation of the whole child_process Node.JS module, and exports
+       * this class. We mock the module itself below.
+       */
+      const cp = mockDeep<cp.ChildProcess>();
+
+      /**
+       * This mock represents the child_process module. We configure it to
+       * return the ChildProcess object created above when we call the "spawn"
+       * function. This will contain the streams we run our unit tests against.
+       */
+      const childProcessMock = mockDeep<ChildProcess>();
+      childProcessMock.spawn.mockReturnValue(cp);
+
+      /**
+       * Mock the "Core" object, and pass dummy values for the "commands" input
+       * parameter. In this case, a value of "test run" should invoke "taskcat
+       * test run"
+       */
+      const core = mockDeep<Core>();
+      core.getInput.mockImplementation(
+        (name: string, options?: InputOptions | undefined): string => {
+          if (name === "commands") return "test run";
+          else if (name === "aws-account-id") return "123456789";
+          else if (name === "update_cfn_lint") return "false";
+          else if (name === "update_taskcat") return "test";
+          else throw new Error();
+        }
+      );
+      core.getBooleanInput.mockImplementation(
+        (name: string, options?: InputOptions | undefined): boolean => {
+          if (name === "update_taskcat")
+            throw new TypeError(
+              'Input does not meet YAML 1.2 "Core Schema" specification: update_taskcat\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
+            );
+          else return false;
+        }
+      );
+
+      expect(() => {
+        new PostEntrypointImpl(
+          mock<Artifact>(),
+          core,
+          childProcessMock,
+          mock<TaskcatArtifactManagerImpl>()
+        ).run();
+      }).toThrow(
+        'Input does not meet YAML 1.2 "Core Schema" specification: update_taskcat\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
+      );
+    });
   });
 });

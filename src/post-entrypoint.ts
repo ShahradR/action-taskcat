@@ -31,10 +31,32 @@ export class PostEntrypointImpl implements PostEntrypoint {
   public run(): void {
     const awsAccountId = this._core.getInput("aws-account-id");
     const taskcatCommands = this._core.getInput("commands");
-    const updateCfnLint: boolean = this._core.getBooleanInput(
-      "update_cfn_lint"
-    );
-    const updateTaskcat: boolean = this._core.getBooleanInput("update_taskcat");
+
+    let updateCfnLint: boolean;
+    let updateTaskcat: boolean;
+
+    try {
+      updateCfnLint = this._core.getBooleanInput("update_cfn_lint");
+    } catch (e) {
+      if (
+        e instanceof TypeError &&
+        this._core.getInput("update_cfn_lint") === ""
+      )
+        updateCfnLint = false;
+      else throw e;
+    }
+
+    try {
+      updateTaskcat = this._core.getBooleanInput("update_taskcat");
+    } catch (e) {
+      if (
+        e instanceof TypeError &&
+        this._core.getInput("update_taskcat") === ""
+      )
+        updateTaskcat = false;
+      else throw e;
+    }
+
     this._core.info("Received commands: " + taskcatCommands);
 
     if (updateCfnLint) {
