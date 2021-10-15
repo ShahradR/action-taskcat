@@ -31,8 +31,32 @@ export class PostEntrypointImpl implements PostEntrypoint {
   public run(): void {
     const awsAccountId = this._core.getInput("aws-account-id");
     const taskcatCommands = this._core.getInput("commands");
+    const updateCfnLint: boolean = this._core.getBooleanInput(
+      "update_cfn_lint"
+    );
     const updateTaskcat: boolean = this._core.getBooleanInput("update_taskcat");
     this._core.info("Received commands: " + taskcatCommands);
+
+    if (updateCfnLint) {
+      const updateCfnLintChild = this._cp.spawn(
+        "pip",
+        ["install", "--upgrade", "cfn_lint"],
+        {
+          stdio: ["ignore", "pipe", "pipe"],
+        }
+      );
+
+      updateCfnLintChild.stdout.setEncoding("utf-8");
+      updateCfnLintChild.stderr.setEncoding("utf-8");
+
+      updateCfnLintChild.stdout.on("data", (data) => {
+        this._core.info(data);
+      });
+
+      updateCfnLintChild.stderr.on("data", (data) => {
+        this._core.info(data);
+      });
+    }
 
     if (updateTaskcat) {
       const updateTaskcatChild = this._cp.spawn(
