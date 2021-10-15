@@ -13869,8 +13869,22 @@ var PostEntrypointImpl = /** @class */ (function () {
         var _this = this;
         var awsAccountId = this._core.getInput("aws-account-id");
         var taskcatCommands = this._core.getInput("commands");
+        var updateCfnLint = this._core.getBooleanInput("update_cfn_lint");
         var updateTaskcat = this._core.getBooleanInput("update_taskcat");
         this._core.info("Received commands: " + taskcatCommands);
+        if (updateCfnLint) {
+            var updateCfnLintChild = this._cp.spawn("pip", ["install", "--upgrade", "cfn_lint"], {
+                stdio: ["ignore", "pipe", "pipe"],
+            });
+            updateCfnLintChild.stdout.setEncoding("utf-8");
+            updateCfnLintChild.stderr.setEncoding("utf-8");
+            updateCfnLintChild.stdout.on("data", function (data) {
+                _this._core.info(data);
+            });
+            updateCfnLintChild.stderr.on("data", function (data) {
+                _this._core.info(data);
+            });
+        }
         if (updateTaskcat) {
             var updateTaskcatChild = this._cp.spawn("pip", ["install", "--upgrade", "taskcat"], {
                 stdio: ["ignore", "pipe", "pipe"],
