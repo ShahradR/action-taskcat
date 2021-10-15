@@ -12,4 +12,4 @@ RUN chmod +x /entrypoint.sh
 
 COPY dist/index.js /dist/index.js
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/dist/index.js"]
