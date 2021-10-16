@@ -1131,5 +1131,477 @@ describe("the PostEntrypoint class", () => {
         'Input does not meet YAML 1.2 "Core Schema" specification: update_taskcat\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
       );
     });
+
+    it("should remove the carriage return and line feed characters from the end of the line", async () => {
+      expect.assertions(7);
+
+      // Create real Readable streams (versus the mocks created in other tests).
+      // We can simulate output from taskcat by pushing data to these streams.
+      const pipTaskcatStdout = new Readable();
+      const pipTaskcatStderr = new Readable();
+
+      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipTaskcatStdout,
+        pipTaskcatStderr
+      );
+
+      const pipCfnLintStdout = new Readable();
+      const pipCfnLintStderr = new Readable();
+
+      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipCfnLintStdout,
+        pipCfnLintStderr
+      );
+
+      const taskcatStdout = new Readable();
+      const taskcatStderr = new Readable();
+
+      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        taskcatStdout,
+        taskcatStderr
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip") {
+            if (args.includes("taskcat")) return pipTaskcatCp;
+            else if (args.includes("cfn_lint")) return pipCfnLintCp;
+            else throw Error("pip was invoked for neither taskcat or cfn_lint");
+          } else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
+
+      const core = mockDeep<Core>();
+      core.getInput.mockReturnValue("test run");
+      core.getBooleanInput.mockReturnValue(true);
+
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout\r\n");
+      pipCfnLintStdout.push(null);
+
+      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr\r\n");
+      pipCfnLintStderr.push(null);
+
+      pipTaskcatStdout.push("Output from the pip taskcat update stdout\r\n");
+      pipTaskcatStdout.push(null);
+
+      pipTaskcatStderr.push("Output from the pip taskcat update stderr\r\n");
+      pipTaskcatStderr.push(null);
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      taskcatStdout.push("Output from taskcat's stdout\r\n");
+      taskcatStdout.push(null);
+
+      taskcatStderr.push("Output from taskcat's stderr\r\n");
+      taskcatStderr.push(null);
+
+      // Delay for 10 milliseconds, to give time for the code to receive and
+      // process the stdout and stderr data we just pushed.
+      await sleep(10);
+      expect(core.info).toHaveBeenNthCalledWith(
+        1,
+        "Received commands: test run"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        2,
+        "Output from the pip cfn_lint update stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        3,
+        "Output from the pip cfn_lint update stderr"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        4,
+        "Output from the pip taskcat update stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        5,
+        "Output from the pip taskcat update stderr"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        6,
+        "Output from taskcat's stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        7,
+        "Output from taskcat's stderr"
+      );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+    });
+
+    it("should remove preserve the carriage return and line feed characters from the middle of the line", async () => {
+      expect.assertions(7);
+
+      // Create real Readable streams (versus the mocks created in other tests).
+      // We can simulate output from taskcat by pushing data to these streams.
+      const pipTaskcatStdout = new Readable();
+      const pipTaskcatStderr = new Readable();
+
+      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipTaskcatStdout,
+        pipTaskcatStderr
+      );
+
+      const pipCfnLintStdout = new Readable();
+      const pipCfnLintStderr = new Readable();
+
+      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipCfnLintStdout,
+        pipCfnLintStderr
+      );
+
+      const taskcatStdout = new Readable();
+      const taskcatStderr = new Readable();
+
+      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        taskcatStdout,
+        taskcatStderr
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip") {
+            if (args.includes("taskcat")) return pipTaskcatCp;
+            else if (args.includes("cfn_lint")) return pipCfnLintCp;
+            else throw Error("pip was invoked for neither taskcat or cfn_lint");
+          } else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
+
+      const core = mockDeep<Core>();
+      core.getInput.mockReturnValue("test run");
+      core.getBooleanInput.mockReturnValue(true);
+
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      pipCfnLintStdout.push("Output from the pip\r\n cfn_lint update stdout");
+      pipCfnLintStdout.push(null);
+
+      pipCfnLintStderr.push("Output from the pip\r\n cfn_lint update stderr");
+      pipCfnLintStderr.push(null);
+
+      pipTaskcatStdout.push("Output from the pip\r\n taskcat update stdout");
+      pipTaskcatStdout.push(null);
+
+      pipTaskcatStderr.push("Output from the pip\r\n taskcat update stderr");
+      pipTaskcatStderr.push(null);
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      taskcatStdout.push("Output from\r\n taskcat's stdout");
+      taskcatStdout.push(null);
+
+      taskcatStderr.push("Output from\r\n taskcat's stderr");
+      taskcatStderr.push(null);
+
+      // Delay for 10 milliseconds, to give time for the code to receive and
+      // process the stdout and stderr data we just pushed.
+      await sleep(10);
+      expect(core.info).toHaveBeenNthCalledWith(
+        1,
+        "Received commands: test run"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        2,
+        "Output from the pip\r\n cfn_lint update stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        3,
+        "Output from the pip\r\n cfn_lint update stderr"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        4,
+        "Output from the pip\r\n taskcat update stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        5,
+        "Output from the pip\r\n taskcat update stderr"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        6,
+        "Output from\r\n taskcat's stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        7,
+        "Output from\r\n taskcat's stderr"
+      );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+    });
+
+    it("should remove the line feed character from the end of the line", async () => {
+      expect.assertions(7);
+
+      // Create real Readable streams (versus the mocks created in other tests).
+      // We can simulate output from taskcat by pushing data to these streams.
+      const pipTaskcatStdout = new Readable();
+      const pipTaskcatStderr = new Readable();
+
+      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipTaskcatStdout,
+        pipTaskcatStderr
+      );
+
+      const pipCfnLintStdout = new Readable();
+      const pipCfnLintStderr = new Readable();
+
+      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipCfnLintStdout,
+        pipCfnLintStderr
+      );
+
+      const taskcatStdout = new Readable();
+      const taskcatStderr = new Readable();
+
+      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        taskcatStdout,
+        taskcatStderr
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip") {
+            if (args.includes("taskcat")) return pipTaskcatCp;
+            else if (args.includes("cfn_lint")) return pipCfnLintCp;
+            else throw Error("pip was invoked for neither taskcat or cfn_lint");
+          } else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
+
+      const core = mockDeep<Core>();
+      core.getInput.mockReturnValue("test run");
+      core.getBooleanInput.mockReturnValue(true);
+
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout\n");
+      pipCfnLintStdout.push(null);
+
+      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr\n");
+      pipCfnLintStderr.push(null);
+
+      pipTaskcatStdout.push("Output from the pip taskcat update stdout\n");
+      pipTaskcatStdout.push(null);
+
+      pipTaskcatStderr.push("Output from the pip taskcat update stderr\n");
+      pipTaskcatStderr.push(null);
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      taskcatStdout.push("Output from taskcat's stdout\n");
+      taskcatStdout.push(null);
+
+      taskcatStderr.push("Output from taskcat's stderr\n");
+      taskcatStderr.push(null);
+
+      // Delay for 10 milliseconds, to give time for the code to receive and
+      // process the stdout and stderr data we just pushed.
+      await sleep(10);
+      expect(core.info).toHaveBeenNthCalledWith(
+        1,
+        "Received commands: test run"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        2,
+        "Output from the pip cfn_lint update stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        3,
+        "Output from the pip cfn_lint update stderr"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        4,
+        "Output from the pip taskcat update stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        5,
+        "Output from the pip taskcat update stderr"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        6,
+        "Output from taskcat's stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        7,
+        "Output from taskcat's stderr"
+      );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+    });
+
+    it("should remove preserve the line feed character from the middle of the line", async () => {
+      expect.assertions(7);
+
+      // Create real Readable streams (versus the mocks created in other tests).
+      // We can simulate output from taskcat by pushing data to these streams.
+      const pipTaskcatStdout = new Readable();
+      const pipTaskcatStderr = new Readable();
+
+      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipTaskcatStdout,
+        pipTaskcatStderr
+      );
+
+      const pipCfnLintStdout = new Readable();
+      const pipCfnLintStderr = new Readable();
+
+      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        pipCfnLintStdout,
+        pipCfnLintStderr
+      );
+
+      const taskcatStdout = new Readable();
+      const taskcatStderr = new Readable();
+
+      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
+        0,
+        taskcatStdout,
+        taskcatStderr
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip") {
+            if (args.includes("taskcat")) return pipTaskcatCp;
+            else if (args.includes("cfn_lint")) return pipCfnLintCp;
+            else throw Error("pip was invoked for neither taskcat or cfn_lint");
+          } else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
+
+      const core = mockDeep<Core>();
+      core.getInput.mockReturnValue("test run");
+      core.getBooleanInput.mockReturnValue(true);
+
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      pipCfnLintStdout.push("Output from the pip\n cfn_lint update stdout");
+      pipCfnLintStdout.push(null);
+
+      pipCfnLintStderr.push("Output from the pip\n cfn_lint update stderr");
+      pipCfnLintStderr.push(null);
+
+      pipTaskcatStdout.push("Output from the pip\n taskcat update stdout");
+      pipTaskcatStdout.push(null);
+
+      pipTaskcatStderr.push("Output from the pip\n taskcat update stderr");
+      pipTaskcatStderr.push(null);
+
+      // Push data to the different streams. Note that we have to end the
+      // stream with `null`, to let it know we're done pushing data.
+      taskcatStdout.push("Output from\n taskcat's stdout");
+      taskcatStdout.push(null);
+
+      taskcatStderr.push("Output from\n taskcat's stderr");
+      taskcatStderr.push(null);
+
+      // Delay for 10 milliseconds, to give time for the code to receive and
+      // process the stdout and stderr data we just pushed.
+      await sleep(10);
+      expect(core.info).toHaveBeenNthCalledWith(
+        1,
+        "Received commands: test run"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        2,
+        "Output from the pip\n cfn_lint update stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        3,
+        "Output from the pip\n cfn_lint update stderr"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        4,
+        "Output from the pip\n taskcat update stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        5,
+        "Output from the pip\n taskcat update stderr"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        6,
+        "Output from\n taskcat's stdout"
+      );
+      expect(core.info).toHaveBeenNthCalledWith(
+        7,
+        "Output from\n taskcat's stderr"
+      );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+    });
   });
 });
