@@ -13899,10 +13899,10 @@ var PostEntrypointImpl = /** @class */ (function () {
             updateCfnLintChild.stdout.setEncoding("utf-8");
             updateCfnLintChild.stderr.setEncoding("utf-8");
             updateCfnLintChild.stdout.on("data", function (data) {
-                _this._core.info(data);
+                _this._core.info(data.replace(/\r?\n$/g, ""));
             });
             updateCfnLintChild.stderr.on("data", function (data) {
-                _this._core.info(data);
+                _this._core.info(data.replace(/\r?\n$/g, ""));
             });
         }
         if (updateTaskcat) {
@@ -13912,10 +13912,10 @@ var PostEntrypointImpl = /** @class */ (function () {
             updateTaskcatChild.stdout.setEncoding("utf-8");
             updateTaskcatChild.stderr.setEncoding("utf-8");
             updateTaskcatChild.stdout.on("data", function (data) {
-                _this._core.info(data);
+                _this._core.info(data.replace(/\r?\n$/g, ""));
             });
             updateTaskcatChild.stderr.on("data", function (data) {
-                _this._core.info(data);
+                _this._core.info(data.replace(/\r?\n$/g, ""));
             });
         }
         var newList = taskcatCommands.split(" ");
@@ -13925,10 +13925,10 @@ var PostEntrypointImpl = /** @class */ (function () {
         child.stdout.setEncoding("utf-8");
         child.stderr.setEncoding("utf-8");
         child.stdout.on("data", function (data) {
-            _this._core.info(data);
+            _this._core.info(data.replace(/\r?\n$/g, ""));
         });
         child.stderr.on("data", function (data) {
-            _this._core.info(data);
+            _this._core.info(data.replace(/\r?\n$/g, ""));
         });
         child.on("exit", function (exitCode) {
             _this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId);

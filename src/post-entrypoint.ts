@@ -72,11 +72,11 @@ export class PostEntrypointImpl implements PostEntrypoint {
       updateCfnLintChild.stderr.setEncoding("utf-8");
 
       updateCfnLintChild.stdout.on("data", (data) => {
-        this._core.info(data);
+        this._core.info(data.replace(/\r?\n$/g, ""));
       });
 
       updateCfnLintChild.stderr.on("data", (data) => {
-        this._core.info(data);
+        this._core.info(data.replace(/\r?\n$/g, ""));
       });
     }
 
@@ -93,11 +93,11 @@ export class PostEntrypointImpl implements PostEntrypoint {
       updateTaskcatChild.stderr.setEncoding("utf-8");
 
       updateTaskcatChild.stdout.on("data", (data) => {
-        this._core.info(data);
+        this._core.info(data.replace(/\r?\n$/g, ""));
       });
 
       updateTaskcatChild.stderr.on("data", (data) => {
-        this._core.info(data);
+        this._core.info(data.replace(/\r?\n$/g, ""));
       });
     }
 
@@ -111,11 +111,11 @@ export class PostEntrypointImpl implements PostEntrypoint {
     child.stderr.setEncoding("utf-8");
 
     child.stdout.on("data", (data) => {
-      this._core.info(data);
+      this._core.info(data.replace(/\r?\n$/g, ""));
     });
 
     child.stderr.on("data", (data) => {
-      this._core.info(data);
+      this._core.info(data.replace(/\r?\n$/g, ""));
     });
 
     child.on("exit", (exitCode) => {
