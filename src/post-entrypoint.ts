@@ -28,7 +28,7 @@ export class PostEntrypointImpl implements PostEntrypoint {
     this._taskcatArtifactManager = taskcatArtifactManager;
   }
 
-  public run(): void {
+  public async run(): Promise<void> {
     const awsAccountId = this._core.getInput("aws-account-id");
     const taskcatCommands = this._core.getInput("commands");
 
@@ -60,70 +60,99 @@ export class PostEntrypointImpl implements PostEntrypoint {
     this._core.info("Received commands: " + taskcatCommands);
 
     if (updateCfnLint) {
-      const updateCfnLintChild = this._cp.spawn(
-        "pip",
-        ["install", "--upgrade", "cfn_lint"],
-        {
-          stdio: ["ignore", "pipe", "pipe"],
-        }
-      );
-
-      updateCfnLintChild.stdout.setEncoding("utf-8");
-      updateCfnLintChild.stderr.setEncoding("utf-8");
-
-      updateCfnLintChild.stdout.on("data", (data) => {
-        this._core.info(data.replace(/\r?\n$/g, ""));
-      });
-
-      updateCfnLintChild.stderr.on("data", (data) => {
-        this._core.info(data.replace(/\r?\n$/g, ""));
-      });
+      await this.invokeCommand(this._core, this._cp, "pip", [
+        "install",
+        "--upgrade",
+        "cfn_lint",
+      ]);
     }
 
     if (updateTaskcat) {
-      const updateTaskcatChild = this._cp.spawn(
-        "pip",
-        ["install", "--upgrade", "taskcat"],
-        {
-          stdio: ["ignore", "pipe", "pipe"],
-        }
-      );
-
-      updateTaskcatChild.stdout.setEncoding("utf-8");
-      updateTaskcatChild.stderr.setEncoding("utf-8");
-
-      updateTaskcatChild.stdout.on("data", (data) => {
-        this._core.info(data.replace(/\r?\n$/g, ""));
-      });
-
-      updateTaskcatChild.stderr.on("data", (data) => {
-        this._core.info(data.replace(/\r?\n$/g, ""));
-      });
+      await this.invokeCommand(this._core, this._cp, "pip", [
+        "install",
+        "--upgrade",
+        "taskcat",
+      ]);
     }
 
     const newList = taskcatCommands.split(" ");
 
-    const child = this._cp.spawn("taskcat", newList, {
-      stdio: ["ignore", "pipe", "pipe"],
+    await this.invokeTaskcatCommand(
+      this._core,
+      this._cp,
+      "taskcat",
+      newList,
+      awsAccountId
+    );
+  }
+
+  public invokeCommand(
+    core: Core,
+    cp: ChildProcess,
+    command: string,
+    args: string[]
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = cp.spawn(command, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      child.stdout.setEncoding("utf-8");
+      child.stderr.setEncoding("utf-8");
+
+      child.stdout.on("data", (data) => {
+        core.info(data.replace(/\r?\n$/g, ""));
+      });
+
+      child.stderr.on("data", (data) => {
+        core.info(data.replace(/\r?\n$/g, ""));
+      });
+
+      child.on("exit", (exitCode) => {
+        if (exitCode !== 0) {
+          reject(new Error("The command did not complete successfully."));
+        }
+        resolve();
+      });
     });
+  }
 
-    child.stdout.setEncoding("utf-8");
-    child.stderr.setEncoding("utf-8");
+  public invokeTaskcatCommand(
+    core: Core,
+    cp: ChildProcess,
+    command: string,
+    args: string[],
+    awsAccountId: string
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = cp.spawn(command, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
 
-    child.stdout.on("data", (data) => {
-      this._core.info(data.replace(/\r?\n$/g, ""));
-    });
+      child.stdout.setEncoding("utf-8");
+      child.stderr.setEncoding("utf-8");
 
-    child.stderr.on("data", (data) => {
-      this._core.info(data.replace(/\r?\n$/g, ""));
-    });
+      child.stdout.on("data", (data) => {
+        core.info(data.replace(/\r?\n$/g, ""));
+      });
 
-    child.on("exit", (exitCode) => {
-      this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(awsAccountId);
+      child.stderr.on("data", (data) => {
+        core.info(data.replace(/\r?\n$/g, ""));
+      });
 
-      if (exitCode !== 0) {
-        this._core.setFailed("The taskcat test did not complete successfully.");
-      }
+      child.on("exit", (exitCode) => {
+        this._taskcatArtifactManager.maskAndPublishTaskcatArtifacts(
+          awsAccountId
+        );
+
+        if (exitCode !== 0) {
+          this._core.setFailed(
+            "The taskcat test did not complete successfully."
+          );
+          reject(new Error("The taskcat test did not complete successfully."));
+        }
+        resolve();
+      });
     });
   }
 }
