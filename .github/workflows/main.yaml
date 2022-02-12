@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install nektos/act
-        run: curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash -s -- v0.2.20
+        run: curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash -s -- -b /usr/local/bin/ v0.2.20
       - uses: actions/setup-node@v2.1.5
         with:
           node-version: 14
