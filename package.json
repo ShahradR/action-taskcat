@@ -11,7 +11,7 @@
     "@actions/artifact": "^0.6.1",
     "@actions/core": "^1.6.0",
     "@babel/runtime": "^7.17.2",
-    "inversify": "^5.1.1",
+    "inversify": "^6.0.1",
     "reflect-metadata": "^0.1.13",
     "replace-in-file": "^6.2.0"
   },
