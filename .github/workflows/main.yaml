@@ -2,6 +2,9 @@ name: CI workflow
 
 on: [push, pull_request, workflow_dispatch]
 
+permissions:
+  checks: write
+
 jobs:
   pre-commit:
     name: Run pre-commit checks
