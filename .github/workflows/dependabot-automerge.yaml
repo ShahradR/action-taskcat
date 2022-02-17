@@ -10,8 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
+      - name: "Wait for status checks"
+        id: waitforstatuschecks
+        uses: "WyriHaximus/github-action-wait-for-status@v2"
+        with:
+          ignoreActions: Automerge PRs
+          checkInterval: 300
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       - name: Dependabot metadata
         id: metadata
+        if: ${{ steps.waitforstatuschecks.outputs.status == 'success' }}
         uses: dependabot/fetch-metadata@v1.2.0
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
