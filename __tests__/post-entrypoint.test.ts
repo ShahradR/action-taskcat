@@ -13,23 +13,19 @@ import { TaskcatArtifactManagerImpl } from "../src/taskcat-artifact-manager";
 import { ChildProcessMock } from "./mocks/childProcessMock";
 import { Readable } from "stream";
 import { InputOptions } from "@actions/core";
+import {
+  childProcessFactory,
+  CP_MOCK_TYPE,
+} from "./util/child-process-factory";
 
 describe("the PostEntrypoint class", () => {
   describe("the main function", () => {
     it("should invoke taskcat", () => {
       expect.assertions(1);
 
-      /**
-       * Mock the ChildProcess class. This is returned by child_process.spawn,
-       * and contains information about the running process itself, including
-       * the stdin, stdout, and stderr streams used to verify taskcat's output.
-       *
-       * This is different from the ChildProcess interface defined in
-       * src/interfaces.js we use throughout the application—that is a
-       * representation of the whole child_process Node.JS module, and exports
-       * this class. We mock the module itself below.
-       */
-      const cp = mockDeep<cp.ChildProcess>();
+      const cp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.JEST_MOCK
+      );
 
       /**
        * This mock represents the child_process module. We configure it to
@@ -186,17 +182,9 @@ describe("the PostEntrypoint class", () => {
     it("should not invoke taskcat with the --minimal-output flag", () => {
       expect.assertions(1);
 
-      /**
-       * Mock the ChildProcess class. This is returned by child_process.spawn,
-       * and contains information about the running process itself, including
-       * the stdin, stdout, and stderr streams used to verify taskcat's output.
-       *
-       * This is different from the ChildProcess interface defined in
-       * src/interfaces.js we use throughout the application—that is a
-       * representation of the whole child_process Node.JS module, and exports
-       * this class. We mock the module itself below.
-       */
-      const cp = mockDeep<cp.ChildProcess>();
+      const cp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.JEST_MOCK
+      );
 
       /**
        * This mock represents the child_process module. We configure it to
@@ -237,17 +225,9 @@ describe("the PostEntrypoint class", () => {
     it("should update taskcat when the update_taskcat parameter is passed", () => {
       expect.assertions(2);
 
-      /**
-       * Mock the ChildProcess class. This is returned by child_process.spawn,
-       * and contains information about the running process itself, including
-       * the stdin, stdout, and stderr streams used to verify taskcat's output.
-       *
-       * This is different from the ChildProcess interface defined in
-       * src/interfaces.js we use throughout the application—that is a
-       * representation of the whole child_process Node.JS module, and exports
-       * this class. We mock the module itself below.
-       */
-      const cp = mockDeep<cp.ChildProcess>();
+      const cp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.JEST_MOCK
+      );
 
       /**
        * This mock represents the child_process module. We configure it to
@@ -311,17 +291,9 @@ describe("the PostEntrypoint class", () => {
     it("should update cfn_lint when the update_cfn_lint parameter is passed", () => {
       expect.assertions(2);
 
-      /**
-       * Mock the ChildProcess class. This is returned by child_process.spawn,
-       * and contains information about the running process itself, including
-       * the stdin, stdout, and stderr streams used to verify taskcat's output.
-       *
-       * This is different from the ChildProcess interface defined in
-       * src/interfaces.js we use throughout the application—that is a
-       * representation of the whole child_process Node.JS module, and exports
-       * this class. We mock the module itself below.
-       */
-      const cp = mockDeep<cp.ChildProcess>();
+      const cp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.JEST_MOCK
+      );
 
       /**
        * This mock represents the child_process module. We configure it to
@@ -385,17 +357,9 @@ describe("the PostEntrypoint class", () => {
     it("should update cfn_lint and taskcat when both the update_cfn_lint update_taskcat parameters are passed", () => {
       expect.assertions(3);
 
-      /**
-       * Mock the ChildProcess class. This is returned by child_process.spawn,
-       * and contains information about the running process itself, including
-       * the stdin, stdout, and stderr streams used to verify taskcat's output.
-       *
-       * This is different from the ChildProcess interface defined in
-       * src/interfaces.js we use throughout the application—that is a
-       * representation of the whole child_process Node.JS module, and exports
-       * this class. We mock the module itself below.
-       */
-      const cp = mockDeep<cp.ChildProcess>();
+      const cp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.JEST_MOCK
+      );
 
       /**
        * This mock represents the child_process module. We configure it to
@@ -898,17 +862,9 @@ describe("the PostEntrypoint class", () => {
     it("should throw an exception if the update_cfn_lint input parameter is not a boolean value", async () => {
       expect.assertions(1);
 
-      /**
-       * Mock the ChildProcess class. This is returned by child_process.spawn,
-       * and contains information about the running process itself, including
-       * the stdin, stdout, and stderr streams used to verify taskcat's output.
-       *
-       * This is different from the ChildProcess interface defined in
-       * src/interfaces.js we use throughout the application—that is a
-       * representation of the whole child_process Node.JS module, and exports
-       * this class. We mock the module itself below.
-       */
-      const cp = mockDeep<cp.ChildProcess>();
+      const cp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.JEST_MOCK
+      );
 
       /**
        * This mock represents the child_process module. We configure it to
@@ -1075,17 +1031,9 @@ describe("the PostEntrypoint class", () => {
     it("should throw an exception if the update_taskcat input parameter is not a boolean value", async () => {
       expect.assertions(1);
 
-      /**
-       * Mock the ChildProcess class. This is returned by child_process.spawn,
-       * and contains information about the running process itself, including
-       * the stdin, stdout, and stderr streams used to verify taskcat's output.
-       *
-       * This is different from the ChildProcess interface defined in
-       * src/interfaces.js we use throughout the application—that is a
-       * representation of the whole child_process Node.JS module, and exports
-       * this class. We mock the module itself below.
-       */
-      const cp = mockDeep<cp.ChildProcess>();
+      const cp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.JEST_MOCK
+      );
 
       /**
        * This mock represents the child_process module. We configure it to
