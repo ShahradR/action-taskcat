@@ -44,7 +44,7 @@
   },
   "scripts": {
     "package": "ncc build --no-source-map-register --license licenses.txt",
-    "test": "jest"
+    "test": "jest --colors"
   },
   "repository": {
     "type": "git",
