@@ -8,7 +8,7 @@
     "doc": "docs"
   },
   "dependencies": {
-    "@actions/artifact": "^0.6.1",
+    "@actions/artifact": "^1.0.0",
     "@actions/core": "^1.6.0",
     "@babel/runtime": "^7.17.2",
     "inversify": "^5.1.1",
