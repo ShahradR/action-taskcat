@@ -12,7 +12,7 @@ jobs:
     name: Run pre-commit checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - uses: pre-commit/action@v2.0.3
 
@@ -20,7 +20,7 @@ jobs:
     name: Jest tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install nektos/act
         run: curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash -s -- -b /usr/local/bin/ v0.2.20
       - uses: actions/setup-node@v3
@@ -43,7 +43,7 @@ jobs:
     name: SonarCloud
     needs: [tests]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Download coverage information
@@ -61,7 +61,7 @@ jobs:
     name: End-to-end tests - default
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -79,7 +79,7 @@ jobs:
     name: End-to-end tests - update taskcat
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -97,7 +97,7 @@ jobs:
     name: End-to-end tests - update taskcat
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -116,7 +116,7 @@ jobs:
     name: End-to-end tests - @v1 - default
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -133,7 +133,7 @@ jobs:
     name: End-to-end tests - @v1 - update taskcat
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -151,7 +151,7 @@ jobs:
     name: End-to-end tests - @v1 - update taskcat
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -170,7 +170,7 @@ jobs:
     name: End-to-end tests - @v2 - default
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -187,7 +187,7 @@ jobs:
     name: End-to-end tests - @v2 - update taskcat
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -205,7 +205,7 @@ jobs:
     name: End-to-end tests - @v2 - update taskcat
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -224,7 +224,7 @@ jobs:
     name: Run Vale
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: errata-ai/vale-action@v1.5.0
         with:
           debug: true
@@ -251,7 +251,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 12
