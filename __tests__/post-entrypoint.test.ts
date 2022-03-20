@@ -137,12 +137,9 @@ describe("the PostEntrypoint class", () => {
     it("should redirect standard and error outputs to the console", async () => {
       expect.assertions(3);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const stdout = new Readable();
-      const stderr = new Readable();
-
-      const cp = new ChildProcessMock(0, stdout, stderr);
+      const cp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
+      );
 
       const childProcessMock = mock<ChildProcess>();
       childProcessMock.spawn.mockReturnValue(cp);
@@ -157,13 +154,8 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      stdout.push("Output from stdout");
-      stdout.push(null);
-
-      stderr.push("Output from stderr");
-      stderr.push(null);
+      (cp as ChildProcessMock).pushMessageToStdout("Output from stdout");
+      (cp as ChildProcessMock).pushMessageToStderr("Output from stderr");
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -222,20 +214,29 @@ describe("the PostEntrypoint class", () => {
         anyObject()
       );
     });
-    it("should update taskcat when the update_taskcat parameter is passed", () => {
+    it("should update taskcat when the update_taskcat parameter is passed", async () => {
       expect.assertions(2);
 
-      const cp = childProcessFactory.getChildProcessMock(
-        CP_MOCK_TYPE.JEST_MOCK
+      const pipCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      /**
-       * This mock represents the child_process module. We configure it to
-       * return the ChildProcess object created above when we call the "spawn"
-       * function. This will contain the streams we run our unit tests against.
-       */
-      const childProcessMock = mockDeep<ChildProcess>();
-      childProcessMock.spawn.mockReturnValue(cp);
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip" && args.includes("taskcat")) return pipCp;
+          else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
 
       /**
        * Mock the "Core" object, and pass dummy values for the "commands" input
@@ -263,6 +264,21 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
+      (pipCp as ChildProcessMock).pushMessageToStdout(
+        "Output from cfn_lint pip's stdout"
+      );
+      (pipCp as ChildProcessMock).pushMessageToStderr(
+        "Output from cfn_lint pip's stderr"
+      );
+
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr"
+      );
+
+      await sleep(10);
       /**
        * We verify that if the update_taskcat parameter is passed as an input,
        * the application calls pip in addition to our taskcat command
@@ -286,22 +302,35 @@ describe("the PostEntrypoint class", () => {
         anyArray(),
         anyObject()
       );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
     });
 
-    it("should update cfn_lint when the update_cfn_lint parameter is passed", () => {
+    it("should update cfn_lint when the update_cfn_lint parameter is passed", async () => {
       expect.assertions(2);
 
-      const cp = childProcessFactory.getChildProcessMock(
-        CP_MOCK_TYPE.JEST_MOCK
+      const pipCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      /**
-       * This mock represents the child_process module. We configure it to
-       * return the ChildProcess object created above when we call the "spawn"
-       * function. This will contain the streams we run our unit tests against.
-       */
-      const childProcessMock = mockDeep<ChildProcess>();
-      childProcessMock.spawn.mockReturnValue(cp);
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip" && args.includes("cfn_lint")) return pipCp;
+          else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
 
       /**
        * Mock the "Core" object, and pass dummy values for the "commands" input
@@ -329,6 +358,22 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
+      (pipCp as ChildProcessMock).pushMessageToStdout(
+        "Output from cfn_lint pip's stdout"
+      );
+      (pipCp as ChildProcessMock).pushMessageToStderr(
+        "Output from cfn_lint pip's stderr"
+      );
+
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr"
+      );
+
+      await sleep(10);
+
       /**
        * We verify that if the update_taskcat parameter is passed as an input,
        * the application calls pip in addition to our taskcat command
@@ -352,22 +397,41 @@ describe("the PostEntrypoint class", () => {
         anyArray(),
         anyObject()
       );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
     });
 
-    it("should update cfn_lint and taskcat when both the update_cfn_lint update_taskcat parameters are passed", () => {
+    it("should update cfn_lint and taskcat when both the update_cfn_lint update_taskcat parameters are passed", async () => {
       expect.assertions(3);
 
-      const cp = childProcessFactory.getChildProcessMock(
-        CP_MOCK_TYPE.JEST_MOCK
+      const taskcatPipCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      /**
-       * This mock represents the child_process module. We configure it to
-       * return the ChildProcess object created above when we call the "spawn"
-       * function. This will contain the streams we run our unit tests against.
-       */
-      const childProcessMock = mockDeep<ChildProcess>();
-      childProcessMock.spawn.mockReturnValue(cp);
+      const cfnPipCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
+      );
+
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
+      );
+
+      const childProcessMock = mock<ChildProcess>();
+      childProcessMock.spawn.mockImplementation(
+        (
+          command: string,
+          args: readonly string[],
+          options: cp.SpawnOptions
+        ): cp.ChildProcess => {
+          if (command === "pip" && args.includes("cfn_lint")) return cfnPipCp;
+          else if (command === "pip" && args.includes("taskcat"))
+            return taskcatPipCp;
+          else if (command === "taskcat") return taskcatCp;
+          else throw Error("This branch should not be reached");
+        }
+      );
 
       /**
        * Mock the "Core" object, and pass dummy values for the "commands" input
@@ -395,6 +459,29 @@ describe("the PostEntrypoint class", () => {
         childProcessMock,
         mock<TaskcatArtifactManagerImpl>()
       ).run();
+
+      (cfnPipCp as ChildProcessMock).pushMessageToStdout(
+        "Output from cfn_lint pip's stdout"
+      );
+      (cfnPipCp as ChildProcessMock).pushMessageToStderr(
+        "Output from cfn_lint pip's stderr"
+      );
+
+      (taskcatPipCp as ChildProcessMock).pushMessageToStdout(
+        "Output from cfn_lint pip's stdout"
+      );
+      (taskcatPipCp as ChildProcessMock).pushMessageToStderr(
+        "Output from cfn_lint pip's stderr"
+      );
+
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr"
+      );
+
+      await sleep(10);
 
       /**
        * We verify that if the update_taskcat parameter is passed as an input,
@@ -430,29 +517,21 @@ describe("the PostEntrypoint class", () => {
         anyArray(),
         anyObject()
       );
+
+      function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
     });
 
     it("should redirect standard and error outputs to the console from the pip cfn_lint update and taskcat commands", async () => {
       expect.assertions(5);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipStdout = new Readable();
-      const pipStderr = new Readable();
-
-      const pipCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipStdout,
-        pipStderr
+      const pipCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -485,21 +564,19 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipStdout.push("Output from cfn_lint pip's stdout");
-      pipStdout.push(null);
+      (pipCp as ChildProcessMock).pushMessageToStdout(
+        "Output from cfn_lint pip's stdout"
+      );
+      (pipCp as ChildProcessMock).pushMessageToStderr(
+        "Output from cfn_lint pip's stderr"
+      );
 
-      pipStderr.push("Output from cfn_lint pip's stderr");
-      pipStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from taskcat's stdout");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from taskcat's stderr");
-      taskcatStderr.push(null);
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -533,24 +610,12 @@ describe("the PostEntrypoint class", () => {
     it("should redirect standard and error outputs to the console from the pip taskcat update and taskcat commands", async () => {
       expect.assertions(5);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipStdout = new Readable();
-      const pipStderr = new Readable();
-
-      const pipCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipStdout,
-        pipStderr
+      const pipCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -582,21 +647,19 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipStdout.push("Output from taskcat pip's stdout");
-      pipStdout.push(null);
+      (pipCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat pip's stdout"
+      );
+      (pipCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat pip's stderr"
+      );
 
-      pipStderr.push("Output from taskcat pip's stderr");
-      pipStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from taskcat's stdout");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from taskcat's stderr");
-      taskcatStderr.push(null);
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -630,33 +693,16 @@ describe("the PostEntrypoint class", () => {
     it("should redirect standard and error outputs to the console from the pip taskcat and cfn updates as well as the taskcat commands", async () => {
       expect.assertions(7);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipTaskcatStdout = new Readable();
-      const pipTaskcatStderr = new Readable();
-
-      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipTaskcatStdout,
-        pipTaskcatStderr
+      const pipTaskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const pipCfnLintStdout = new Readable();
-      const pipCfnLintStderr = new Readable();
-
-      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipCfnLintStdout,
-        pipCfnLintStderr
+      const pipCfnLintCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -686,27 +732,24 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout");
-      pipCfnLintStdout.push(null);
-
-      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr");
-      pipCfnLintStderr.push(null);
-
-      pipTaskcatStdout.push("Output from the pip taskcat update stdout");
-      pipTaskcatStdout.push(null);
-
-      pipTaskcatStderr.push("Output from the pip taskcat update stderr");
-      pipTaskcatStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from taskcat's stdout");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from taskcat's stderr");
-      taskcatStderr.push(null);
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip cfn_lint update stdout"
+      );
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip cfn_lint update stderr"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip taskcat update stdout"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip taskcat update stderr"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -748,33 +791,16 @@ describe("the PostEntrypoint class", () => {
     it("should set the update_cfn_lint input parameter as optional", async () => {
       expect.assertions(3);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipTaskcatStdout = new Readable();
-      const pipTaskcatStderr = new Readable();
-
-      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipTaskcatStdout,
-        pipTaskcatStderr
+      const pipTaskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const pipCfnLintStdout = new Readable();
-      const pipCfnLintStderr = new Readable();
-
-      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipCfnLintStdout,
-        pipCfnLintStderr
+      const pipCfnLintCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -816,27 +842,24 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout");
-      pipCfnLintStdout.push(null);
-
-      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr");
-      pipCfnLintStderr.push(null);
-
-      pipTaskcatStdout.push("Output from the pip taskcat update stdout");
-      pipTaskcatStdout.push(null);
-
-      pipTaskcatStderr.push("Output from the pip taskcat update stderr");
-      pipTaskcatStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from taskcat's stdout");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from taskcat's stderr");
-      taskcatStderr.push(null);
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip cfn_lint update stdout"
+      );
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip cfn_lint update stderr"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip taskcat update stdout"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip taskcat update stderr"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -860,7 +883,7 @@ describe("the PostEntrypoint class", () => {
     });
 
     it("should throw an exception if the update_cfn_lint input parameter is not a boolean value", async () => {
-      expect.assertions(1);
+      expect.assertions(2);
 
       const cp = childProcessFactory.getChildProcessMock(
         CP_MOCK_TYPE.JEST_MOCK
@@ -891,6 +914,7 @@ describe("the PostEntrypoint class", () => {
       );
       core.getBooleanInput.mockImplementation(
         (name: string, options?: InputOptions | undefined): boolean => {
+          // console.log("name")
           if (name === "update_cfn_lint")
             throw new TypeError(
               'Input does not meet YAML 1.2 "Core Schema" specification: update_cfn_lint\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
@@ -899,48 +923,33 @@ describe("the PostEntrypoint class", () => {
         }
       );
 
-      expect(() => {
-        new PostEntrypointImpl(
-          mock<Artifact>(),
-          core,
-          childProcessMock,
-          mock<TaskcatArtifactManagerImpl>()
-        ).run();
-      }).toThrow(
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      expect(core.setFailed).toHaveBeenCalledWith(
         'Input does not meet YAML 1.2 "Core Schema" specification: update_cfn_lint\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
       );
+
+      expect(childProcessMock.spawn).not.toHaveBeenCalled();
     });
 
     it("should set the update_taskcat input parameter as optional", async () => {
       expect.assertions(3);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipTaskcatStdout = new Readable();
-      const pipTaskcatStderr = new Readable();
-
-      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipTaskcatStdout,
-        pipTaskcatStderr
+      const pipTaskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const pipCfnLintStdout = new Readable();
-      const pipCfnLintStderr = new Readable();
-
-      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipCfnLintStdout,
-        pipCfnLintStderr
+      const pipCfnLintCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -985,27 +994,24 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout");
-      pipCfnLintStdout.push(null);
-
-      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr");
-      pipCfnLintStderr.push(null);
-
-      pipTaskcatStdout.push("Output from the pip taskcat update stdout");
-      pipTaskcatStdout.push(null);
-
-      pipTaskcatStderr.push("Output from the pip taskcat update stderr");
-      pipTaskcatStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from taskcat's stdout");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from taskcat's stderr");
-      taskcatStderr.push(null);
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip cfn_lint update stdout"
+      );
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip cfn_lint update stderr"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip taskcat update stdout"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip taskcat update stderr"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -1029,7 +1035,7 @@ describe("the PostEntrypoint class", () => {
     });
 
     it("should throw an exception if the update_taskcat input parameter is not a boolean value", async () => {
-      expect.assertions(1);
+      expect.assertions(2);
 
       const cp = childProcessFactory.getChildProcessMock(
         CP_MOCK_TYPE.JEST_MOCK
@@ -1068,48 +1074,33 @@ describe("the PostEntrypoint class", () => {
         }
       );
 
-      expect(() => {
-        new PostEntrypointImpl(
-          mock<Artifact>(),
-          core,
-          childProcessMock,
-          mock<TaskcatArtifactManagerImpl>()
-        ).run();
-      }).toThrow(
+      new PostEntrypointImpl(
+        mock<Artifact>(),
+        core,
+        childProcessMock,
+        mock<TaskcatArtifactManagerImpl>()
+      ).run();
+
+      expect(core.setFailed).toHaveBeenCalledWith(
         'Input does not meet YAML 1.2 "Core Schema" specification: update_taskcat\nSupport boolean input list: `true | True | TRUE | false | False | FALSE`'
       );
+
+      expect(childProcessMock.spawn).not.toHaveBeenCalled();
     });
 
     it("should remove the carriage return and line feed characters from the end of the line", async () => {
       expect.assertions(7);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipTaskcatStdout = new Readable();
-      const pipTaskcatStderr = new Readable();
-
-      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipTaskcatStdout,
-        pipTaskcatStderr
+      const pipTaskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const pipCfnLintStdout = new Readable();
-      const pipCfnLintStderr = new Readable();
-
-      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipCfnLintStdout,
-        pipCfnLintStderr
+      const pipCfnLintCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -1139,27 +1130,24 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout\r\n");
-      pipCfnLintStdout.push(null);
-
-      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr\r\n");
-      pipCfnLintStderr.push(null);
-
-      pipTaskcatStdout.push("Output from the pip taskcat update stdout\r\n");
-      pipTaskcatStdout.push(null);
-
-      pipTaskcatStderr.push("Output from the pip taskcat update stderr\r\n");
-      pipTaskcatStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from taskcat's stdout\r\n");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from taskcat's stderr\r\n");
-      taskcatStderr.push(null);
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip cfn_lint update stdout\r\n"
+      );
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip cfn_lint update stderr\r\n"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip taskcat update stdout\r\n"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip taskcat update stderr\r\n"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout\r\n"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr\r\n"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -1201,33 +1189,16 @@ describe("the PostEntrypoint class", () => {
     it("should remove preserve the carriage return and line feed characters from the middle of the line", async () => {
       expect.assertions(7);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipTaskcatStdout = new Readable();
-      const pipTaskcatStderr = new Readable();
-
-      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipTaskcatStdout,
-        pipTaskcatStderr
+      const pipTaskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const pipCfnLintStdout = new Readable();
-      const pipCfnLintStderr = new Readable();
-
-      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipCfnLintStdout,
-        pipCfnLintStderr
+      const pipCfnLintCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -1257,27 +1228,24 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipCfnLintStdout.push("Output from the pip\r\n cfn_lint update stdout");
-      pipCfnLintStdout.push(null);
-
-      pipCfnLintStderr.push("Output from the pip\r\n cfn_lint update stderr");
-      pipCfnLintStderr.push(null);
-
-      pipTaskcatStdout.push("Output from the pip\r\n taskcat update stdout");
-      pipTaskcatStdout.push(null);
-
-      pipTaskcatStderr.push("Output from the pip\r\n taskcat update stderr");
-      pipTaskcatStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from\r\n taskcat's stdout");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from\r\n taskcat's stderr");
-      taskcatStderr.push(null);
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip\r\n cfn_lint update stdout"
+      );
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip\r\n cfn_lint update stderr"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip\r\n taskcat update stdout"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip\r\n taskcat update stderr"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from\r\n taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from\r\n taskcat's stderr"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -1319,33 +1287,16 @@ describe("the PostEntrypoint class", () => {
     it("should remove the line feed character from the end of the line", async () => {
       expect.assertions(7);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipTaskcatStdout = new Readable();
-      const pipTaskcatStderr = new Readable();
-
-      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipTaskcatStdout,
-        pipTaskcatStderr
+      const pipTaskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const pipCfnLintStdout = new Readable();
-      const pipCfnLintStderr = new Readable();
-
-      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipCfnLintStdout,
-        pipCfnLintStderr
+      const pipCfnLintCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -1375,27 +1326,24 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipCfnLintStdout.push("Output from the pip cfn_lint update stdout\n");
-      pipCfnLintStdout.push(null);
-
-      pipCfnLintStderr.push("Output from the pip cfn_lint update stderr\n");
-      pipCfnLintStderr.push(null);
-
-      pipTaskcatStdout.push("Output from the pip taskcat update stdout\n");
-      pipTaskcatStdout.push(null);
-
-      pipTaskcatStderr.push("Output from the pip taskcat update stderr\n");
-      pipTaskcatStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from taskcat's stdout\n");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from taskcat's stderr\n");
-      taskcatStderr.push(null);
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip cfn_lint update stdout\n"
+      );
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip cfn_lint update stderr\n"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip taskcat update stdout\n"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip taskcat update stderr\n"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from taskcat's stdout\n"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from taskcat's stderr\n"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.
@@ -1437,33 +1385,16 @@ describe("the PostEntrypoint class", () => {
     it("should remove preserve the line feed character from the middle of the line", async () => {
       expect.assertions(7);
 
-      // Create real Readable streams (versus the mocks created in other tests).
-      // We can simulate output from taskcat by pushing data to these streams.
-      const pipTaskcatStdout = new Readable();
-      const pipTaskcatStderr = new Readable();
-
-      const pipTaskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipTaskcatStdout,
-        pipTaskcatStderr
+      const pipTaskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const pipCfnLintStdout = new Readable();
-      const pipCfnLintStderr = new Readable();
-
-      const pipCfnLintCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        pipCfnLintStdout,
-        pipCfnLintStderr
+      const pipCfnLintCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
-      const taskcatStdout = new Readable();
-      const taskcatStderr = new Readable();
-
-      const taskcatCp: cp.ChildProcess = new ChildProcessMock(
-        0,
-        taskcatStdout,
-        taskcatStderr
+      const taskcatCp = childProcessFactory.getChildProcessMock(
+        CP_MOCK_TYPE.READABLE_MOCK
       );
 
       const childProcessMock = mock<ChildProcess>();
@@ -1493,27 +1424,24 @@ describe("the PostEntrypoint class", () => {
         mock<TaskcatArtifactManagerImpl>()
       ).run();
 
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      pipCfnLintStdout.push("Output from the pip\n cfn_lint update stdout");
-      pipCfnLintStdout.push(null);
-
-      pipCfnLintStderr.push("Output from the pip\n cfn_lint update stderr");
-      pipCfnLintStderr.push(null);
-
-      pipTaskcatStdout.push("Output from the pip\n taskcat update stdout");
-      pipTaskcatStdout.push(null);
-
-      pipTaskcatStderr.push("Output from the pip\n taskcat update stderr");
-      pipTaskcatStderr.push(null);
-
-      // Push data to the different streams. Note that we have to end the
-      // stream with `null`, to let it know we're done pushing data.
-      taskcatStdout.push("Output from\n taskcat's stdout");
-      taskcatStdout.push(null);
-
-      taskcatStderr.push("Output from\n taskcat's stderr");
-      taskcatStderr.push(null);
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip\n cfn_lint update stdout"
+      );
+      (pipCfnLintCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip\n cfn_lint update stderr"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from the pip\n taskcat update stdout"
+      );
+      (pipTaskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from the pip\n taskcat update stderr"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStdout(
+        "Output from\n taskcat's stdout"
+      );
+      (taskcatCp as ChildProcessMock).pushMessageToStderr(
+        "Output from\n taskcat's stderr"
+      );
 
       // Delay for 10 milliseconds, to give time for the code to receive and
       // process the stdout and stderr data we just pushed.

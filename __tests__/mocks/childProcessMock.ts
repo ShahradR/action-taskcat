@@ -158,4 +158,18 @@ export class ChildProcessMock implements ChildProcess {
     this.stdout = stdout;
     this.stderr = stderr;
   }
+
+  public pushMessageToStdout(message: Serializable): void {
+    // Push data to the different streams. Note that we have to end the
+    // stream with `null`, to let it know we're done pushing data.
+    this.stdout.push(message);
+    this.stdout.push(null);
+  }
+
+  public pushMessageToStderr(message: Serializable): void {
+    // Push data to the different streams. Note that we have to end the
+    // stream with `null`, to let it know we're done pushing data.
+    this.stderr.push(message);
+    this.stderr.push(null);
+  }
 }
