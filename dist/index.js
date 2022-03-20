@@ -13903,12 +13903,14 @@ var PostEntrypointImpl = /** @class */ (function () {
     }
     PostEntrypointImpl.prototype.run = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var awsAccountId, taskcatCommands, updateCfnLint, updateTaskcat, newList;
+            var awsAccountId, taskcatCommands, updateCfnLint, updateTaskcat, e_1, e_2, newList, e_3;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         awsAccountId = this._core.getInput("aws-account-id");
                         taskcatCommands = this._core.getInput("commands");
+                        updateCfnLint = false;
+                        updateTaskcat = false;
                         try {
                             updateCfnLint = this._core.getBooleanInput("update_cfn_lint");
                         }
@@ -13916,8 +13918,10 @@ var PostEntrypointImpl = /** @class */ (function () {
                             if (e instanceof TypeError &&
                                 this._core.getInput("update_cfn_lint") === "")
                                 updateCfnLint = false;
-                            else
-                                throw e;
+                            else {
+                                this._core.setFailed(e.message);
+                                return [2 /*return*/];
+                            }
                         }
                         try {
                             updateTaskcat = this._core.getBooleanInput("update_taskcat");
@@ -13926,35 +13930,68 @@ var PostEntrypointImpl = /** @class */ (function () {
                             if (e instanceof TypeError &&
                                 this._core.getInput("update_taskcat") === "")
                                 updateTaskcat = false;
-                            else
-                                throw e;
+                            else {
+                                this._core.setFailed(e.message);
+                                return [2 /*return*/];
+                            }
                         }
                         this._core.info("Received commands: " + taskcatCommands);
-                        if (!updateCfnLint) return [3 /*break*/, 2];
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 4, , 5]);
+                        if (!updateCfnLint) return [3 /*break*/, 3];
                         return [4 /*yield*/, this.invokeCommand(this._core, this._cp, "pip", [
                                 "install",
                                 "--upgrade",
                                 "cfn_lint",
                             ])];
-                    case 1:
-                        _a.sent();
-                        _a.label = 2;
                     case 2:
-                        if (!updateTaskcat) return [3 /*break*/, 4];
+                        _a.sent();
+                        _a.label = 3;
+                    case 3: return [3 /*break*/, 5];
+                    case 4:
+                        e_1 = _a.sent();
+                        if (e_1 instanceof Error) {
+                            this._core.setFailed(e_1.message);
+                            return [2 /*return*/];
+                        }
+                        return [3 /*break*/, 5];
+                    case 5:
+                        _a.trys.push([5, 8, , 9]);
+                        if (!updateTaskcat) return [3 /*break*/, 7];
                         return [4 /*yield*/, this.invokeCommand(this._core, this._cp, "pip", [
                                 "install",
                                 "--upgrade",
                                 "taskcat",
                             ])];
-                    case 3:
+                    case 6:
                         _a.sent();
-                        _a.label = 4;
-                    case 4:
+                        _a.label = 7;
+                    case 7: return [3 /*break*/, 9];
+                    case 8:
+                        e_2 = _a.sent();
+                        if (e_2 instanceof Error) {
+                            this._core.setFailed(e_2.message);
+                            return [2 /*return*/];
+                        }
+                        return [3 /*break*/, 9];
+                    case 9:
                         newList = taskcatCommands.split(" ");
+                        _a.label = 10;
+                    case 10:
+                        _a.trys.push([10, 12, , 13]);
                         return [4 /*yield*/, this.invokeTaskcatCommand(this._core, this._cp, "taskcat", newList, awsAccountId)];
-                    case 5:
+                    case 11:
                         _a.sent();
-                        return [2 /*return*/];
+                        return [3 /*break*/, 13];
+                    case 12:
+                        e_3 = _a.sent();
+                        if (e_3 instanceof Error) {
+                            this._core.setFailed(e_3.message);
+                            return [2 /*return*/];
+                        }
+                        return [3 /*break*/, 13];
+                    case 13: return [2 /*return*/];
                 }
             });
         });

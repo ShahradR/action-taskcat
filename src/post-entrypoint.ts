@@ -32,8 +32,8 @@ export class PostEntrypointImpl implements PostEntrypoint {
     const awsAccountId = this._core.getInput("aws-account-id");
     const taskcatCommands = this._core.getInput("commands");
 
-    let updateCfnLint: boolean;
-    let updateTaskcat: boolean;
+    let updateCfnLint = false;
+    let updateTaskcat = false;
 
     try {
       updateCfnLint = this._core.getBooleanInput("update_cfn_lint");
@@ -43,7 +43,10 @@ export class PostEntrypointImpl implements PostEntrypoint {
         this._core.getInput("update_cfn_lint") === ""
       )
         updateCfnLint = false;
-      else throw e;
+      else {
+        this._core.setFailed((e as TypeError).message);
+        return;
+      }
     }
 
     try {
@@ -54,36 +57,59 @@ export class PostEntrypointImpl implements PostEntrypoint {
         this._core.getInput("update_taskcat") === ""
       )
         updateTaskcat = false;
-      else throw e;
+      else {
+        this._core.setFailed((e as TypeError).message);
+        return;
+      }
     }
 
     this._core.info("Received commands: " + taskcatCommands);
 
-    if (updateCfnLint) {
-      await this.invokeCommand(this._core, this._cp, "pip", [
-        "install",
-        "--upgrade",
-        "cfn_lint",
-      ]);
+    try {
+      if (updateCfnLint) {
+        await this.invokeCommand(this._core, this._cp, "pip", [
+          "install",
+          "--upgrade",
+          "cfn_lint",
+        ]);
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        this._core.setFailed(e.message);
+        return;
+      }
     }
 
-    if (updateTaskcat) {
-      await this.invokeCommand(this._core, this._cp, "pip", [
-        "install",
-        "--upgrade",
-        "taskcat",
-      ]);
+    try {
+      if (updateTaskcat) {
+        await this.invokeCommand(this._core, this._cp, "pip", [
+          "install",
+          "--upgrade",
+          "taskcat",
+        ]);
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        this._core.setFailed(e.message);
+        return;
+      }
     }
 
     const newList = taskcatCommands.split(" ");
 
-    await this.invokeTaskcatCommand(
-      this._core,
-      this._cp,
-      "taskcat",
-      newList,
-      awsAccountId
-    );
+    try {
+      await this.invokeTaskcatCommand(
+        this._core,
+        this._cp,
+        "taskcat",
+        newList,
+        awsAccountId
+      );
+    } catch (e) {
+      if (e instanceof Error) {
+        this._core.setFailed(e.message);
+      }
+    }
   }
 
   public invokeCommand(
