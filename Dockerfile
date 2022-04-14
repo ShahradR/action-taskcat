@@ -1,11 +1,8 @@
-# For v0.9 and higher, the taskcat containers do not pin specific
-# versions. Rather, they always fetch the latest version from pip. See
-# https://dockr.ly/2BjpG7C to see the taskcat Dockerfile.
+FROM python:3.8.13-alpine3.15
 
-# hadolint disable=DL3007
-FROM taskcat/taskcat:latest
+RUN apk add --no-cache python3-dev~3.9 gcc~10 libc-dev~0.7 nodejs~16 npm~8 && rm -rf /var/cache/apk/*
 
-RUN apk add --no-cache nodejs~=12 npm~=12 && rm -rf /var/cache/apk/*
+RUN pip3 install taskcat==0.9.30 --upgrade
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
