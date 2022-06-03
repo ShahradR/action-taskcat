@@ -225,7 +225,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: errata-ai/vale-action@v1.5.0
+      - uses: errata-ai/vale-action@v2.0.1
         with:
           debug: true
           files: '[ "README.md", "vale/README.md", "src/", "e2e/", "docs/", "__tests__/" ]'
