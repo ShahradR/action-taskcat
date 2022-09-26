@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: "Wait for status checks"
         id: waitforstatuschecks
-        uses: "WyriHaximus/github-action-wait-for-status@v1.5"
+        uses: "WyriHaximus/github-action-wait-for-status@v1.7.1"
         with:
           ignoreActions: Automerge PRs
           checkInterval: 300
