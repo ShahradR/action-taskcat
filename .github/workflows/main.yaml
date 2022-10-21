@@ -125,7 +125,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ca-central-1
       - name: Invoke "taskcat test run"
-        uses: ShahradR/action-taskcat@v1
+        uses: ShahradR/action-taskcat@v2.2.6
         with:
           commands: test run --project-root ./e2e/resources/default
 
@@ -142,7 +142,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ca-central-1
       - name: Invoke "taskcat test run"
-        uses: ShahradR/action-taskcat@v1
+        uses: ShahradR/action-taskcat@v2.2.6
         with:
           commands: test run --project-root ./e2e/resources/default
           update_taskcat: true
@@ -160,7 +160,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ca-central-1
       - name: Invoke "taskcat test run"
-        uses: ShahradR/action-taskcat@v1
+        uses: ShahradR/action-taskcat@v2.2.6
         with:
           commands: test run --project-root ./e2e/resources/default
           update_taskcat: true
@@ -179,7 +179,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ca-central-1
       - name: Invoke "taskcat test run"
-        uses: ShahradR/action-taskcat@v2
+        uses: ShahradR/action-taskcat@v2.2.6
         with:
           commands: test run --project-root ./e2e/resources/default
 
@@ -196,7 +196,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ca-central-1
       - name: Invoke "taskcat test run"
-        uses: ShahradR/action-taskcat@v2
+        uses: ShahradR/action-taskcat@v2.2.6
         with:
           commands: test run --project-root ./e2e/resources/default
           update_taskcat: true
@@ -214,7 +214,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ca-central-1
       - name: Invoke "taskcat test run"
-        uses: ShahradR/action-taskcat@v2
+        uses: ShahradR/action-taskcat@v2.2.6
         with:
           commands: test run --project-root ./e2e/resources/default
           update_taskcat: true
