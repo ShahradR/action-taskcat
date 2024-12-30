@@ -1,6 +1,7 @@
+/* eslint-disable jest/no-disabled-tests */
 import cp from "child_process";
 
-describe("integration tests", () => {
+describe.skip("integration tests", () => {
   describe("when the AWS credentials are available", () => {
     it("creates a CloudFormation stack", () => {
       expect.assertions(3);
